@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Joel's AI Content Engine</title>
+<style>
+  :root{--bg:#0a0a0a;--panel:#141414;--accent:#ff6b35;--accent2:#00d4aa;--text:#e0e0e0;--muted:#888;--border:#2a2a2a;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+  body{background:var(--bg);color:var(--text);min-height:100vh;}
+  .container{max-width:900px;margin:0 auto;padding:20px;}
+  header{text-align:center;padding:30px 0;border-bottom:1px solid var(--border);margin-bottom:20px;}
+  header h1{font-size:28px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  header p{color:var(--muted);margin-top:8px;}
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab{padding:10px 18px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;transition:all 0.2s;}
+  .tab:hover{border-color:var(--accent);color:var(--text);}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .tool-panel{display:none;}
+  .tool-panel.active{display:block;}
+  .tool-panel h2{font-size:20px;margin-bottom:4px;}
+  .tool-panel .desc{color:var(--muted);font-size:14px;margin-bottom:16px;}
+  .form-group{margin-bottom:16px;}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
+  input[type="text"],input[type="password"],textarea,select{width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;}
+  input[type="file"]{padding:8px;}
+  textarea{min-height:120px;resize:vertical;}
+  button{padding:10px 16px;border-radius:6px;border:none;cursor:pointer;font-size:14px;transition:all 0.2s;}
+  .generate{background:var(--accent);color:#fff;}
+  .generate:hover{background:#e55a2b;}
+  .secondary-btn{background:var(--panel);color:var(--text);border:1px solid var(--border);}
+  .secondary-btn:hover{border-color:var(--accent);}
+  .result{margin-top:20px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;display:none;}
+  .result.visible{display:block;}
+  .result-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .result-header h3{margin:0;font-size:16px;}
+  .copy-btn{background:var(--accent2);color:#000;padding:6px 12px;font-size:12px;}
+  pre{white-space:pre-wrap;word-wrap:break-word;font-size:13px;line-height:1.6;}
+  .error{color:#ff4444;font-size:13px;margin-top:8px;}
+  .api-key-section{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;}
+  .api-key-section h3{font-size:16px;margin-bottom:12px;}
+  .api-key-input{display:flex;gap:8px;}
+  .api-key-input input{flex:1;}
+  .api-key-input button{white-space:nowrap;}
+  .key-status{font-size:12px;color:var(--accent2);margin-top:6px;}
+  .key-status.error{color:#ff4444;}
+  /* Landing Page */
+  .landing-page{text-align:center;padding:40px 20px;max-width:600px;margin:0 auto;}
+  .landing-page h1{font-size:36px;margin-bottom:12px;}
+  .landing-page p{font-size:18px;color:var(--muted);margin-bottom:32px;}
+  .landing-btn{background:var(--accent);color:#fff;padding:14px 32px;font-size:16px;border-radius:8px;}
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:32px;text-align:left;}
+  .feature-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;}
+  .feature-card h3{font-size:16px;margin-bottom:8px;}
+  .feature-card p{font-size:13px;color:var(--muted);margin:0;}
+  .hidden{display:none;}
+
+  /* Wizard Styles */
+  .wizard-container{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;}
+  .wizard-question{font-size:18px;font-weight:500;margin-bottom:16px;}
+  .wizard-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .wizard-option{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all 0.15s;}
+  .wizard-option:hover{border-color:var(--accent);background:rgba(255,107,53,0.08);}
+  .wizard-option.selected{border-color:var(--accent);background:rgba(255,107,53,0.15);}
+  .wizard-option-label{width:32px;height:32px;border-radius:6px;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0;}
+  .wizard-option-text{font-size:14px;}
+  .wizard-custom{display:flex;gap:8px;margin-top:8px;}
+  .wizard-custom input{flex:1;}
+  .wizard-custom button{white-space:nowrap;}
+  .wizard-nav{display:flex;justify-content:space-between;margin-top:16px;}
+  .wizard-progress{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .wizard-step-counter{font-size:12px;color:var(--muted);white-space:nowrap;}
+  .wizard-progress-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .wizard-progress-fill{height:100%;background:var(--accent);transition:width 0.3s ease;}
+  .wizard-summary{display:flex;flex-direction:column;gap:8px;}
+  .wizard-summary-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+  .wizard-summary-label{font-size:12px;color:var(--muted);}
+  .wizard-summary-value{font-size:14px;text-align:right;}
+  .wizard-hidden{display:none;}
+  .wizard-visible{display:block;}
+  .wizard-detected{background:rgba(0,212,170,0.1);border:1px solid var(--accent2);border-radius:6px;padding:10px 12px;margin-bottom:16px;display:none;}
+  .wizard-detected.visible{display:block;}
+  .wizard-detected-label{font-size:12px;color:var(--accent2);margin-bottom:2px;}
+  .wizard-detected-value{font-size:14px;}
+</style>
+</head>
+<body>
+
+<div id="landingPage" class="landing-page">
+  <h1>🎬 Joel's AI Content Engine</h1>
+  <p>Adaptive. Dynamic. Built for Singapore.</p>
+  <button class="landing-btn" onclick="enterApp()">Enter Engine →</button>
+  <div class="features">
+    <div class="feature-card"><h3>🎬 TikTok Script</h3><p>Adaptive wizard that asks the right questions based on your product image.</p></div>
+    <div class="feature-card"><h3>🎥 UGC Prompt</h3><p>Image-aware prompt generation for Seedance / Runway.</p></div>
+    <div class="feature-card"><h3>✨ Translate</h3><p>English ↔ Singlish ↔ Chinese with local nuance.</p></div>
+  </div>
+</div>
+
+<div id="appContainer" class="container hidden">
+
+  <header>
+    <h1>🎬 Joel's AI Content Engine</h1>
+    <p>Adaptive. Dynamic. Built for Singapore.</p>
+  </header>
+
+  <div class="api-key-section">
+    <h3>🔑 Anthropic API Key</h3>
+    <div class="api-key-input">
+      <input type="password" id="apiKey" placeholder="sk-ant-api03-..." onchange="saveKey()">
+      <button class="secondary-btn" onclick="saveKey()">Save</button>
+    </div>
+    <div id="keyStatus" class="key-status" style="display:none;"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('script')">🎬 TikTok Script</button>
+    <button class="tab" onclick="switchTab('ugc')">🎥 UGC Prompt</button>
+    <button class="tab" onclick="switchTab('translate')">✨ Translate</button>
+  </div>
+
+  <!-- TOOL 1: TIKTOK SCRIPT WIZARD -->
+  <div class="tool-panel active" id="panel-script">
+    <h2>🎬 TikTok Script Generator</h2>
+    <p class="desc">Upload a product photo. The AI detects the product type and adapts the questions.</p>
+    <div id="scriptWizard" class="wizard-container">
+      <div class="wizard-progress">
+        <span class="wizard-step-counter" id="scriptStepCounter">Step 1 of 7</span>
+        <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="scriptProgress" style="width:14%"></div></div>
+      </div>
+      <div id="scriptImageStep">
+        <div class="wizard-question">Upload a product image (optional)</div>
+        <p class="desc" style="margin-top:-8px;margin-bottom:12px;">If you upload, the AI will detect the product type and skip that question.</p>
+        <div class="form-group">
+          <input type="file" id="scriptProdImg" accept="image/*" onchange="previewImage('scriptProdImg','scriptProdPreview')">
+          <div id="scriptProdPreview" style="margin-top:8px;max-width:200px;display:none;"><img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;"></div>
+        </div>
+        <div class="wizard-nav">
+          <button class="generate" onclick="startScriptWizard()">Continue to Questions →</button>
+        </div>
+      </div>
+      <div id="scriptQuestionBox" class="wizard-hidden">
+        <div class="wizard-detected" id="scriptDetected"><div class="wizard-detected-label">Detected from image</div><div class="wizard-detected-value" id="scriptDetectedValue"></div></div>
+        <div class="wizard-question" id="scriptQuestion"></div>
+        <div class="wizard-options" id="scriptOptions"></div>
+        <div class="wizard-nav" id="scriptNav">
+          <button class="secondary-btn" id="scriptBack" onclick="scriptWizard.back()" style="display:none;">← Back</button>
+        </div>
+      </div>
+      <div id="scriptSummaryBox" class="wizard-hidden">
+        <div class="wizard-summary" id="scriptSummary"></div>
+        <div class="form-group" style="margin-top:16px;">
+          <label>Product Name (required)</label>
+          <input type="text" id="scriptProdName" placeholder="e.g. Selly's Chili Garlic Sauce">
+        </div>
+        <div class="form-group">
+          <label>Product Description (optional)</label>
+          <input type="text" id="scriptProdDesc" placeholder="Premium sauce, $12.90, target busy parents...">
+        </div>
+        <div class="wizard-nav">
+          <button class="secondary-btn" onclick="scriptWizard.restart()">Restart</button>
+          <button class="generate" onclick="scriptWizard.generate()">Generate Script</button>
+        </div>
+      </div>
+    </div>
+    <div class="result" id="scriptResult">
+      <div class="result-header"><h3>🎬 Generated Script</h3><button class="copy-btn" onclick="copyResult('scriptResult')">Copy</button></div>
+      <pre id="scriptOutput"></pre>
+    </div>
+  </div>
+
+  <!-- TOOL 2: UGC PROMPT WIZARD -->
+  <div class="tool-panel" id="panel-ugc">
+    <h2>🎥 UGC Prompt Generator</h2>
+    <p class="desc">Upload a reference photo. The AI detects the subject type and adapts the questions.</p>
+    <div id="ugcWizard" class="wizard-container">
+      <div class="wizard-progress">
+        <span class="wizard-step-counter" id="ugcStepCounter">Step 1 of 6</span>
+        <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="ugcProgress" style="width:16%"></div></div>
+      </div>
+      <div id="ugcImageStep">
+        <div class="wizard-question">Upload a reference image (optional)</div>
+        <p class="desc" style="margin-top:-8px;margin-bottom:12px;">If you upload, the AI will detect the subject type and skip that question.</p>
+        <div class="form-group">
+          <input type="file" id="ugcRefImg" accept="image/*" onchange="previewImage('ugcRefImg','ugcRefPreview')">
+          <div id="ugcRefPreview" style="margin-top:8px;max-width:200px;display:none;"><img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;"></div>
+        </div>
+        <div class="wizard-nav">
+          <button class="generate" onclick="startUgcWizard()">Continue to Questions →</button>
+        </div>
+      </div>
+      <div id="ugcQuestionBox" class="wizard-hidden">
+        <div class="wizard-detected" id="ugcDetected"><div class="wizard-detected-label">Detected from image</div><div class="wizard-detected-value" id="ugcDetectedValue"></div></div>
+        <div class="wizard-question" id="ugcQuestion"></div>
+        <div class="wizard-options" id="ugcOptions"></div>
+        <div class="wizard-nav" id="ugcNav">
+          <button class="secondary-btn" id="ugcBack" onclick="ugcWizard.back()" style="display:none;">← Back</button>
+        </div>
+      </div>
+      <div id="ugcSummaryBox" class="wizard-hidden">
+        <div class="wizard-summary" id="ugcSummary"></div>
+        <div class="form-group" style="margin-top:16px;">
+          <label>Product / Subject Description (required)</label>
+          <input type="text" id="ugcSubject" placeholder="e.g. Woman pouring chili sauce into wok, steam rising">
+        </div>
+        <div class="wizard-nav">
+          <button class="secondary-btn" onclick="ugcWizard.restart()">Restart</button>
+          <button class="generate" onclick="ugcWizard.generate()">Generate Prompt</button>
+        </div>
+      </div>
+    </div>
+    <div class="result" id="ugcResult">
+      <div class="result-header"><h3>🎥 UGC Prompt</h3><button class="copy-btn" onclick="copyResult('ugcResult')">Copy</button></div>
+      <pre id="ugcOutput"></pre>
+    </div>
+  </div>
+
+  <!-- TOOL 3: TRANSLATOR -->
+  <div class="tool-panel" id="panel-translate">
+    <h2>✨ Translate Content</h2>
+    <p class="desc">English ↔ Singlish ↔ Chinese with local nuance.</p>
+    <div class="form-group">
+      <label>From</label>
+      <select id="transFrom">
+        <option value="en">English</option>
+        <option value="sg">Singlish</option>
+        <option value="cn">Chinese</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>To</label>
+      <select id="transTo">
+        <option value="sg">Singlish</option>
+        <option value="en">English</option>
+        <option value="cn">Chinese</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Content</label>
+      <textarea id="transInput" placeholder="Paste content here..."></textarea>
+    </div>
+    <button class="generate" onclick="translateContent()">Translate</button>
+    <div class="result" id="transResult">
+      <div class="result-header"><h3>✨ Translation</h3><button class="copy-btn" onclick="copyResult('transResult')">Copy</button></div>
+      <pre id="transOutput"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+// === API KEY ===
+function saveKey(){const key=document.getElementById('apiKey').value.trim();if(!key){showKeyStatus('Enter a key','error');return;}localStorage.setItem('claude_key',key);showKeyStatus('Key saved ✅','success');}
+function loadKey(){const key=localStorage.getItem('claude_key');if(key){document.getElementById('apiKey').value=key;showKeyStatus('Key loaded from storage','success');}}
+function showKeyStatus(msg,type){const el=document.getElementById('keyStatus');el.textContent=msg;el.className='key-status'+(type==='error'?' error':'');el.style.display='block';}
+function getKey(){return localStorage.getItem('claude_key')||document.getElementById('apiKey').value.trim();}
+
+// === TABS ===
+function switchTab(id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tool-panel').forEach(p=>p.classList.remove('active'));event.target.classList.add('active');document.getElementById('panel-'+id).classList.add('active');}
+
+// === HELPERS ===
+function showResult(id,text){const el=document.getElementById(id);el.querySelector('pre').textContent=text;el.classList.add('visible');el.scrollIntoView({behavior:'smooth'});}
+function showError(id,msg){const el=document.getElementById(id);el.querySelector('pre').textContent='Error: '+msg;el.classList.add('visible');}
+function copyResult(id){const text=document.getElementById(id).querySelector('pre').textContent;navigator.clipboard.writeText(text).then(()=>alert('Copied!'));}
+function previewImage(inputId,previewId){const file=document.getElementById(inputId).files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const img=document.getElementById(previewId).querySelector('img');img.src=e.target.result;document.getElementById(previewId).style.display='block';};reader.readAsDataURL(file);}
+async function getImageBase64(inputId){const file=document.getElementById(inputId).files[0];if(!file)return null;return new Promise((resolve)=>{const reader=new FileReader();reader.onload=e=>resolve(e.target.result);reader.readAsDataURL(file);});}
+
+// === CLAUDE API ===
+async function callClaude(system,user,resultId,imageData=null){
+  const key=getKey();
+  if(!key){showError(resultId,'Enter your Anthropic API key first.');return null;}
+  const messages=[{role:'user',content:[]}];
+  if(imageData){messages[0].content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:imageData.split(',')[1]}});}
+  messages[0].content.push({type:'text',text:user});
+  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4096,system,messages})});
+  if(!res.ok){const err=await res.text();showError(resultId,`API Error ${res.status}: ${err}`);return null;}
+  const data=await res.json();
+  return data.content?.[0]?.text||'';
+}
+
+// === IMAGE ANALYSIS ===
+async function analyzeProductImage(inputId){
+  const imageData=await getImageBase64(inputId);
+  if(!imageData)return null;
+  const system=`You are a product analyst. Look at the image and identify the product category. Respond with ONLY the category name from this exact list: Food & Beverage, Beauty & Health, Tech & Gadgets, Home & Lifestyle. If unclear, say "Unknown".`;
+  const user=`What product category is this?`;
+  const result=await callClaude(system,user,'scriptResult',imageData);
+  if(!result)return null;
+  const validTypes=['Food & Beverage','Beauty & Health','Tech & Gadgets','Home & Lifestyle'];
+  const detected=validTypes.find(t=>result.includes(t));
+  return detected||null;
+}
+async function analyzeUgcImage(inputId){
+  const imageData=await getImageBase64(inputId);
+  if(!imageData)return null;
+  const system=`You are a video content analyst. Look at the image and identify the best video type. Respond with ONLY the type from this exact list: Product showcase, Lifestyle / Real use, Unboxing / First look, Before & After. If unclear, say "Unknown".`;
+  const user=`What video type fits this subject best?`;
+  const result=await callClaude(system,user,'ugcResult',imageData);
+  if(!result)return null;
+  const validTypes=['Product showcase','Lifestyle / Real use','Unboxing / First look','Before & After'];
+  const detected=validTypes.find(t=>result.includes(t));
+  return detected||null;
+}
+
+// === WIZARD ENGINE ===
+class WizardEngine{
+  constructor(config){this.questions=config.questions;this.answers=[];this.current=0;this.onComplete=config.onComplete;this.containerId=config.containerId;this.questionBoxId=config.questionBoxId;this.summaryBoxId=config.summaryBoxId;this.questionElId=config.questionEl;this.optionsElId=config.optionsEl;this.navElId=config.navEl;this.backElId=config.backEl;this.progressElId=config.progressEl;this.counterElId=config.counterEl;this.summaryElId=config.summaryEl;this.onRestart=config.onRestart;this.key=config.key;this.prefilledCount=0;this.detectedValue='';}
+  start(prefilled=[],detectedValue=''){
+    this.current=0;this.answers=[];this.prefilledCount=0;this.detectedValue='';
+    if(prefilled.length>0){this.answers=prefilled;this.current=prefilled.length;this.prefilledCount=prefilled.length;this.detectedValue=detectedValue;}
+    if(this.current>=this.questions.length){this.showSummary();return;}
+    this.render();
+  }
+  restart(){this.start();if(this.onRestart)this.onRestart();}
+  render(){
+    const q=this.questions[this.current];
+    document.getElementById(this.questionElId).textContent=q.question;
+    const total=this.questions.length;
+    const current=this.current+1;
+    document.getElementById(this.counterElId).textContent=`Step ${current} of ${total}`;
+    document.getElementById(this.progressElId).style.width=`${(current/total)*100}%`;
+    document.getElementById(this.backElId).style.display=this.current>0?'block':'none';
+    const opts=document.getElementById(this.optionsElId);
+    opts.innerHTML='';
+    q.options.forEach((opt,i)=>{
+      const btn=document.createElement('div');btn.className='wizard-option';btn.innerHTML=`<div class="wizard-option-label">${String.fromCharCode(65+i)}</div><div class="wizard-option-text">${opt}</div>`;
+      btn.onclick=()=>this.select(i,opt);
+      opts.appendChild(btn);
+    });
+    const customDiv=document.createElement('div');customDiv.className='wizard-custom';
+    const customInput=document.createElement('input');customInput.type='text';customInput.placeholder='E — Type custom answer...';customInput.id=`${this.key}CustomInput`;
+    const customBtn=document.createElement('button');customBtn.className='secondary-btn';customBtn.textContent='Continue';customBtn.onclick=()=>{const v=customInput.value.trim();if(v)this.select(4,v);};
+    customDiv.appendChild(customInput);customDiv.appendChild(customBtn);opts.appendChild(customDiv);
+    document.getElementById(this.questionBoxId).className='wizard-visible';
+    document.getElementById(this.summaryBoxId).className='wizard-hidden';
+  }
+  select(index,value){this.answers[this.current]={q:this.questions[this.current].question,a:value,idx:index};
+    if(this.current<this.questions.length-1){this.current++;this.render();}else{this.showSummary();}}
+  back(){if(this.current>0){this.current--;this.render();}}
+  showSummary(){
+    document.getElementById(this.questionBoxId).className='wizard-hidden';
+    document.getElementById(this.summaryBoxId).className='wizard-visible';
+    let html='';
+    this.answers.forEach((ans,i)=>{html+=`<div class="wizard-summary-item"><span class="wizard-summary-label">${i<this.prefilledCount?'✅ Detected from image':'Q'+(i+1)}</span><span class="wizard-summary-value">${ans.a}</span></div>`;});
+    document.getElementById(this.summaryElId).innerHTML=html;
+  }
+  generate(){if(this.onComplete)this.onComplete(this.answers);}
+}
+
+// === SCRIPT WIZARD ===
+const scriptQuestions=[
+  {question:'What type of product are you promoting?',options:['Food & Beverage','Beauty & Health','Tech & Gadgets','Home & Lifestyle']},
+  {question:'What content style do you want?',options:['Product Review / Demo','Storytelling / Drama','Trending / Challenge','Educational / How-to']},
+  {question:'Who is your target audience?',options:['Gen Z (18-25)','Millennials (26-40)','Parents / Families','PHV Drivers / Workers']},
+  {question:'What call-to-action do you want?',options:['Shop now / Buy link','Follow for more tips','Comment your experience','Share with a friend']},
+  {question:'How long should the video be?',options:['15 seconds (Quick hook)','30 seconds (Standard)','60 seconds (Story)','90 seconds (Detailed)']},
+  {question:'What language / tone?',options:['English (professional)','Singlish (relatable, casual)','Chinese (Mandarin)','Mixed (English + Singlish)']}
+];
+
+async function startScriptWizard(){
+  const btn=document.querySelector('#scriptImageStep .generate');
+  const originalText=btn.textContent;
+  const img=document.getElementById('scriptProdImg').files[0];
+  let prefilled=[];let detectedValue='';
+  if(img){
+    btn.textContent='Analyzing image...';btn.disabled=true;
+    const detected=await analyzeProductImage('scriptProdImg');
+    btn.textContent=originalText;btn.disabled=false;
+    if(detected){
+      prefilled=[{q:'What type of product are you promoting?',a:detected,idx:0}];
+      detectedValue=detected;
+      document.getElementById('scriptDetected').className='wizard-detected visible';
+      document.getElementById('scriptDetectedValue').textContent=detected;
+    }
+  }
+  document.getElementById('scriptImageStep').className='wizard-hidden';
+  document.getElementById('scriptQuestionBox').className='wizard-visible';
+  scriptWizard.start(prefilled,detectedValue);
+}
+
+const scriptWizard=new WizardEngine({
+  key:'script',questions:scriptQuestions,containerId:'scriptWizard',questionBoxId:'scriptQuestionBox',summaryBoxId:'scriptSummaryBox',
+  questionEl:'scriptQuestion',optionsEl:'scriptOptions',navEl:'scriptNav',backEl:'scriptBack',progressEl:'scriptProgress',counterEl:'scriptStepCounter',summaryEl:'scriptSummary',
+  onRestart:()=>{document.getElementById('scriptImageStep').className='wizard-visible';document.getElementById('scriptQuestionBox').className='wizard-hidden';document.getElementById('scriptSummaryBox').className='wizard-hidden';document.getElementById('scriptProdName').value='';document.getElementById('scriptProdDesc').value='';document.getElementById('scriptProdImg').value='';document.getElementById('scriptProdPreview').style.display='none';document.getElementById('scriptDetected').className='wizard-detected';}
+});
+
+scriptWizard.onComplete=async(answers)=>{
+  const name=document.getElementById('scriptProdName').value.trim();
+  const desc=document.getElementById('scriptProdDesc').value.trim();
+  if(!name){showError('scriptResult','Enter a product name.');return;}
+  const lenMap={'15 seconds (Quick hook)':'15','30 seconds (Standard)':'30','60 seconds (Story)':'60','90 seconds (Detailed)':'90'};
+  const len=lenMap[answers[4].a]||'30';
+  const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs. If a product image is provided, analyze the packaging, visual style, and colors to tailor the script and visual directions to match the product's aesthetic.`;
+  const user=`Generate a TikTok video script with the following details:
+
+PRODUCT: ${name}
+${desc?'DESCRIPTION: '+desc:''}
+PRODUCT TYPE: ${answers[0].a}
+CONTENT STYLE: ${answers[1].a}
+TARGET AUDIENCE: ${answers[2].a}
+CALL TO ACTION: ${answers[3].a}
+VIDEO LENGTH: ${len} seconds
+LANGUAGE / TONE: ${answers[5].a}
+
+Format the output as:
+
+🎬 VIDEO TITLE
+[Catchy title]
+
+📊 STRUCTURE
+- 0-${Math.floor(len*0.3)}s: HOOK
+- ${Math.floor(len*0.3)}-${Math.floor(len*0.7)}s: BODY (product showcase / story)
+- ${Math.floor(len*0.7)}-${len}s: CTA (call to action)
+
+📝 FULL SCRIPT
+[Write the complete voiceover script with timestamps]
+
+📱 CAPTION
+[Optimized caption with hashtags for Singapore audience]
+
+🎯 SHOOTING NOTES
+[Visual directions: camera angles, lighting, props, setting]`;
+  const result=await callClaude(system,user,'scriptResult',await getImageBase64('scriptProdImg'));
+  if(result)showResult('scriptResult',result);
+};
+
+// === UGC WIZARD ===
+const ugcQuestions=[
+  {question:'What type of video do you want?',options:['Product showcase','Lifestyle / Real use','Unboxing / First look','Before & After']},
+  {question:'What camera style?',options:['Close-up / Macro','Medium shot (waist up)','Overhead / Flat lay','POV / First person']},
+  {question:'What lighting mood?',options:['Bright / Natural daylight','Warm / Cozy indoor','Dramatic / High contrast','Clean / Studio white']},
+  {question:'What motion / camera movement?',options:['Static / Stable tripod','Slow pan / Gentle movement','Handheld / Slightly shaky','Dynamic / Fast cuts']},
+  {question:'What duration?',options:['10 seconds (Tight, one scene)','30 seconds (Standard UGC)','60 seconds (Longer narrative)','5 seconds (Super short hook)']}
+];
+
+async function startUgcWizard(){
+  const btn=document.querySelector('#ugcImageStep .generate');
+  const originalText=btn.textContent;
+  const img=document.getElementById('ugcRefImg').files[0];
+  let prefilled=[];let detectedValue='';
+  if(img){
+    btn.textContent='Analyzing image...';btn.disabled=true;
+    const detected=await analyzeUgcImage('ugcRefImg');
+    btn.textContent=originalText;btn.disabled=false;
+    if(detected){
+      prefilled=[{q:'What type of video do you want?',a:detected,idx:0}];
+      detectedValue=detected;
+      document.getElementById('ugcDetected').className='wizard-detected visible';
+      document.getElementById('ugcDetectedValue').textContent=detected;
+    }
+  }
+  document.getElementById('ugcImageStep').className='wizard-hidden';
+  document.getElementById('ugcQuestionBox').className='wizard-visible';
+  ugcWizard.start(prefilled,detectedValue);
+}
+
+const ugcWizard=new WizardEngine({
+  key:'ugc',questions:ugcQuestions,containerId:'ugcWizard',questionBoxId:'ugcQuestionBox',summaryBoxId:'ugcSummaryBox',
+  questionEl:'ugcQuestion',optionsEl:'ugcOptions',navEl:'ugcNav',backEl:'ugcBack',progressEl:'ugcProgress',counterEl:'ugcStepCounter',summaryEl:'ugcSummary',
+  onRestart:()=>{document.getElementById('ugcImageStep').className='wizard-visible';document.getElementById('ugcQuestionBox').className='wizard-hidden';document.getElementById('ugcSummaryBox').className='wizard-hidden';document.getElementById('ugcSubject').value='';document.getElementById('ugcRefImg').value='';document.getElementById('ugcRefPreview').style.display='none';document.getElementById('ugcDetected').className='wizard-detected';}
+});
+
+ugcWizard.onComplete=async(answers)=>{
+  const subject=document.getElementById('ugcSubject').value.trim();
+  if(!subject){showError('ugcResult','Enter a product / subject description.');return;}
+  const durMap={'10 seconds (Tight, one scene)':'10','30 seconds (Standard UGC)':'30','60 seconds (Longer narrative)':'60','5 seconds (Super short hook)':'5'};
+  const duration=durMap[answers[4].a]||'30';
+  const system=`You are an expert AI video prompt engineer specializing in UGC (user-generated content) style prompts for AI video generators like Seedance, Runway, and similar tools. You create cinematic, detailed prompts that result in authentic, high-converting video content. You focus on real human moments, not overly polished influencer aesthetics. If a reference image is provided, analyze the product's visual appearance, packaging, colors, and style to generate a prompt that visually matches and showcases the product accurately.`;
+  const user=`Generate a ${duration}-second UGC video prompt for AI video generation.
+
+SUBJECT: ${subject}
+VIDEO TYPE: ${answers[0].a}
+CAMERA STYLE: ${answers[1].a}
+LIGHTING MOOD: ${answers[2].a}
+MOTION: ${answers[3].a}
+
+Requirements:
+- ONE continuous paragraph, ${duration=='10'?'60-80':'180-220'} words
+- Cinematic but authentic (real person, not influencer-polished)
+- Specific camera directions (angle, movement, lens)
+- Lighting description matching the mood
+- Emotional tone
+- End with a natural CTA moment (product hold, gesture, or look at camera)
+
+Output ONLY the prompt paragraph. No headings, no explanations.`;
+  const result=await callClaude(system,user,'ugcResult',await getImageBase64('ugcRefImg'));
+  if(result)showResult('ugcResult',result);
+};
+
+// === TOOL 4: TRANSLATOR ===
+async function translateContent(){
+  const input=document.getElementById('transInput').value.trim();
+  const from=document.getElementById('transFrom').value;
+  const to=document.getElementById('transTo').value;
+  if(!input){showError('transResult','Paste content to translate.');return;}
+  if(from===to){showError('transResult','Source and target language are the same.');return;}
+  const langNames={en:'English',sg:'Singlish (Singapore Colloquial English)',cn:'Chinese (Mandarin)'};
+  const system=`You are a Singapore content localization expert. You translate and adapt content between English, Singlish, and Chinese. You understand Singapore culture, food names, local expressions, and shopping behavior. When translating to Singlish, use authentic Singapore colloquial English with lah, leh, lor where natural. When translating to Chinese, use terms Singaporeans use (e.g., 果酱 not 果冻 for jam). When translating to English, ensure it's professional and clear for Singapore audiences.`;
+  const user=`Translate the following content from ${langNames[from]} to ${langNames[to]}. Maintain the original meaning but adapt tone, style, and cultural references for the target language. Only return the translated text, no explanations.
+
+---
+${input}
+---`;
+  const result=await callClaude(system,user,'transResult');
+  if(result)showResult('transResult',result);
+}
+
+// Init
+function enterApp(){document.getElementById('landingPage').style.display='none';document.getElementById('appContainer').style.display='block';}
+loadKey();
+</script>
+</body>
+</html>
