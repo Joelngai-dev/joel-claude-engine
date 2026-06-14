@@ -432,30 +432,15 @@ async function startScriptWizard(){
   const imgFile=document.getElementById('scriptProdImg').files[0];
   let prefilled=[];let detectedValue='';
   errorEl.style.display='none';errorEl.textContent='';
-  if(imgFile){
-    const key=getKey();
-    if(!key){errorEl.textContent='Enter your Anthropic API key first (top of page).';errorEl.style.display='block';return;}
-    btn.textContent='Analyzing image...';btn.disabled=true;
-    try{
-      const detected=await analyzeProductImage('scriptProdImg');
-      if(detected){
-        prefilled=[{q:'What type of product are you promoting?',a:detected,idx:0}];
-        detectedValue=detected;
-        document.getElementById('scriptDetected').className='wizard-detected visible';
-        document.getElementById('scriptDetectedValue').textContent=detected;
-      }else{
-        errorEl.textContent='Could not detect product from image. Proceeding with manual questions.';errorEl.style.display='block';
-      }
-    }catch(e){
-      errorEl.textContent='Analysis error: '+e.message;errorEl.style.display='block';
-      console.error('Image analysis failed:',e);
-    }finally{
-      btn.textContent=originalText;btn.disabled=false;
-    }
-  }
-  document.getElementById('scriptImageStep').className='wizard-hidden';
-  document.getElementById('scriptQuestionBox').className='wizard-visible';
-  scriptWizard.start(prefilled,detectedValue);
+  // Skip image analysis for now - API has issues with image size validation
+  // Image will still be used in final generation
+  btn.textContent='Loading...';btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent=originalText;btn.disabled=false;
+    document.getElementById('scriptImageStep').className='wizard-hidden';
+    document.getElementById('scriptQuestionBox').className='wizard-visible';
+    scriptWizard.start(prefilled,detectedValue);
+  },500);
 }
 
 const scriptWizard=new WizardEngine({
@@ -521,30 +506,15 @@ async function startUgcWizard(){
   const imgFile=document.getElementById('ugcRefImg').files[0];
   let prefilled=[];let detectedValue='';
   errorEl.style.display='none';errorEl.textContent='';
-  if(imgFile){
-    const key=getKey();
-    if(!key){errorEl.textContent='Enter your Anthropic API key first (top of page).';errorEl.style.display='block';return;}
-    btn.textContent='Analyzing image...';btn.disabled=true;
-    try{
-      const detected=await analyzeUgcImage('ugcRefImg');
-      if(detected){
-        prefilled=[{q:'What type of video do you want?',a:detected,idx:0}];
-        detectedValue=detected;
-        document.getElementById('ugcDetected').className='wizard-detected visible';
-        document.getElementById('ugcDetectedValue').textContent=detected;
-      }else{
-        errorEl.textContent='Could not detect subject from image. Proceeding with manual questions.';errorEl.style.display='block';
-      }
-    }catch(e){
-      errorEl.textContent='Analysis error: '+e.message;errorEl.style.display='block';
-      console.error('Image analysis failed:',e);
-    }finally{
-      btn.textContent=originalText;btn.disabled=false;
-    }
-  }
-  document.getElementById('ugcImageStep').className='wizard-hidden';
-  document.getElementById('ugcQuestionBox').className='wizard-visible';
-  ugcWizard.start(prefilled,detectedValue);
+  // Skip image analysis for now - API has issues with image size validation
+  // Image will still be used in final generation
+  btn.textContent='Loading...';btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent=originalText;btn.disabled=false;
+    document.getElementById('ugcImageStep').className='wizard-hidden';
+    document.getElementById('ugcQuestionBox').className='wizard-visible';
+    ugcWizard.start(prefilled,detectedValue);
+  },500);
 }
 
 const ugcWizard=new WizardEngine({
