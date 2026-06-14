@@ -286,15 +286,20 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
   const messages=[{role:'user',content:[]}];
   if(imageData){messages[0].content.push({type:'image',source:{type:'base64',media_type:mediaType,data:imageData.split(',')[1]}});}
   messages[0].content.push({type:'text',text:user});
+  console.log('[Claude API] Calling with model: claude-3-5-sonnet-20241022, image:',!!imageData);
   try{
     const controller=new AbortController();
     const timeoutId=setTimeout(()=>controller.abort(),30000);
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4096,system,messages}),signal:controller.signal});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-3-5-sonnet-20241022',max_tokens:4096,system,messages}),signal:controller.signal});
     clearTimeout(timeoutId);
-    if(!res.ok){const err=await res.text();showError(resultId,`API Error ${res.status}: ${err}`);return null;}
+    console.log('[Claude API] Response status:',res.status);
+    if(!res.ok){const err=await res.text();console.error('[Claude API] Error:',err);showError(resultId,`API Error ${res.status}: ${err}`);return null;}
     const data=await res.json();
-    return data.content?.[0]?.text||'';
+    const text=data.content?.[0]?.text||'';
+    console.log('[Claude API] Response text:',text);
+    return text;
   }catch(e){
+    console.error('[Claude API] Exception:',e);
     if(e.name==='AbortError'){showError(resultId,'Request timed out (30s). Try again or check your connection.');}
     else{showError(resultId,`Network error: ${e.message}`);}
     return null;
