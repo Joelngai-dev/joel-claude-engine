@@ -262,39 +262,61 @@ function showResult(id,text){const el=document.getElementById(id);el.querySelect
 function showError(id,msg){const el=document.getElementById(id);el.querySelector('pre').textContent='Error: '+msg;el.classList.add('visible');}
 function copyResult(id){const text=document.getElementById(id).querySelector('pre').textContent;navigator.clipboard.writeText(text).then(()=>alert('Copied!'));}
 function previewImage(inputId,previewId){const file=document.getElementById(inputId).files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const img=document.getElementById(previewId).querySelector('img');img.src=e.target.result;document.getElementById(previewId).style.display='block';};reader.readAsDataURL(file);}
-async function getImageBase64(inputId){const file=document.getElementById(inputId).files[0];if(!file)return null;return new Promise((resolve)=>{const reader=new FileReader();reader.onload=e=>resolve(e.target.result);reader.readAsDataURL(file);});}
+async function getImageBase64(inputId){
+  const file=document.getElementById(inputId).files[0];
+  if(!file)return null;
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const result=e.target.result;
+      const mediaType=result.match(/data:([^;]+);/)?.[1]||'image/jpeg';
+      resolve({data:result,mediaType});
+    };
+    reader.onerror=()=>reject(new Error('Failed to read image'));
+    reader.readAsDataURL(file);
+  });
+}
 
 // === CLAUDE API ===
-async function callClaude(system,user,resultId,imageData=null){
+async function callClaude(system,user,resultId,imageData=null,mediaType='image/jpeg'){
   const key=getKey();
   if(!key){showError(resultId,'Enter your Anthropic API key first.');return null;}
   const messages=[{role:'user',content:[]}];
-  if(imageData){messages[0].content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:imageData.split(',')[1]}});}
+  if(imageData){messages[0].content.push({type:'image',source:{type:'base64',media_type:mediaType,data:imageData.split(',')[1]}});}
   messages[0].content.push({type:'text',text:user});
-  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4096,system,messages})});
-  if(!res.ok){const err=await res.text();showError(resultId,`API Error ${res.status}: ${err}`);return null;}
-  const data=await res.json();
-  return data.content?.[0]?.text||'';
+  try{
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),30000);
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4096,system,messages}),signal:controller.signal});
+    clearTimeout(timeoutId);
+    if(!res.ok){const err=await res.text();showError(resultId,`API Error ${res.status}: ${err}`);return null;}
+    const data=await res.json();
+    return data.content?.[0]?.text||'';
+  }catch(e){
+    if(e.name==='AbortError'){showError(resultId,'Request timed out (30s). Try again or check your connection.');}
+    else{showError(resultId,`Network error: ${e.message}`);}
+    return null;
+  }
 }
 
 // === IMAGE ANALYSIS ===
 async function analyzeProductImage(inputId){
-  const imageData=await getImageBase64(inputId);
-  if(!imageData)return null;
+  const img=await getImageBase64(inputId);
+  if(!img)return null;
   const system=`You are a product analyst. Look at the image and identify the product category. Respond with ONLY the category name from this exact list: Food & Beverage, Beauty & Health, Tech & Gadgets, Home & Lifestyle. If unclear, say "Unknown".`;
   const user=`What product category is this?`;
-  const result=await callClaude(system,user,'scriptResult',imageData);
+  const result=await callClaude(system,user,'scriptResult',img.data,img.mediaType);
   if(!result)return null;
   const validTypes=['Food & Beverage','Beauty & Health','Tech & Gadgets','Home & Lifestyle'];
   const detected=validTypes.find(t=>result.includes(t));
   return detected||null;
 }
 async function analyzeUgcImage(inputId){
-  const imageData=await getImageBase64(inputId);
-  if(!imageData)return null;
+  const img=await getImageBase64(inputId);
+  if(!img)return null;
   const system=`You are a video content analyst. Look at the image and identify the best video type. Respond with ONLY the type from this exact list: Product showcase, Lifestyle / Real use, Unboxing / First look, Before & After. If unclear, say "Unknown".`;
   const user=`What video type fits this subject best?`;
-  const result=await callClaude(system,user,'ugcResult',imageData);
+  const result=await callClaude(system,user,'ugcResult',img.data,img.mediaType);
   if(!result)return null;
   const validTypes=['Product showcase','Lifestyle / Real use','Unboxing / First look','Before & After'];
   const detected=validTypes.find(t=>result.includes(t));
@@ -359,17 +381,22 @@ const scriptQuestions=[
 async function startScriptWizard(){
   const btn=document.querySelector('#scriptImageStep .generate');
   const originalText=btn.textContent;
-  const img=document.getElementById('scriptProdImg').files[0];
+  const imgFile=document.getElementById('scriptProdImg').files[0];
   let prefilled=[];let detectedValue='';
-  if(img){
+  if(imgFile){
     btn.textContent='Analyzing image...';btn.disabled=true;
-    const detected=await analyzeProductImage('scriptProdImg');
-    btn.textContent=originalText;btn.disabled=false;
-    if(detected){
-      prefilled=[{q:'What type of product are you promoting?',a:detected,idx:0}];
-      detectedValue=detected;
-      document.getElementById('scriptDetected').className='wizard-detected visible';
-      document.getElementById('scriptDetectedValue').textContent=detected;
+    try{
+      const detected=await analyzeProductImage('scriptProdImg');
+      if(detected){
+        prefilled=[{q:'What type of product are you promoting?',a:detected,idx:0}];
+        detectedValue=detected;
+        document.getElementById('scriptDetected').className='wizard-detected visible';
+        document.getElementById('scriptDetectedValue').textContent=detected;
+      }
+    }catch(e){
+      console.error('Image analysis failed:',e);
+    }finally{
+      btn.textContent=originalText;btn.disabled=false;
     }
   }
   document.getElementById('scriptImageStep').className='wizard-hidden';
@@ -419,7 +446,8 @@ Format the output as:
 
 🎯 SHOOTING NOTES
 [Visual directions: camera angles, lighting, props, setting]`;
-  const result=await callClaude(system,user,'scriptResult',await getImageBase64('scriptProdImg'));
+  const img=await getImageBase64('scriptProdImg');
+  const result=await callClaude(system,user,'scriptResult',img?.data,img?.mediaType);
   if(result)showResult('scriptResult',result);
 };
 
@@ -435,17 +463,22 @@ const ugcQuestions=[
 async function startUgcWizard(){
   const btn=document.querySelector('#ugcImageStep .generate');
   const originalText=btn.textContent;
-  const img=document.getElementById('ugcRefImg').files[0];
+  const imgFile=document.getElementById('ugcRefImg').files[0];
   let prefilled=[];let detectedValue='';
-  if(img){
+  if(imgFile){
     btn.textContent='Analyzing image...';btn.disabled=true;
-    const detected=await analyzeUgcImage('ugcRefImg');
-    btn.textContent=originalText;btn.disabled=false;
-    if(detected){
-      prefilled=[{q:'What type of video do you want?',a:detected,idx:0}];
-      detectedValue=detected;
-      document.getElementById('ugcDetected').className='wizard-detected visible';
-      document.getElementById('ugcDetectedValue').textContent=detected;
+    try{
+      const detected=await analyzeUgcImage('ugcRefImg');
+      if(detected){
+        prefilled=[{q:'What type of video do you want?',a:detected,idx:0}];
+        detectedValue=detected;
+        document.getElementById('ugcDetected').className='wizard-detected visible';
+        document.getElementById('ugcDetectedValue').textContent=detected;
+      }
+    }catch(e){
+      console.error('Image analysis failed:',e);
+    }finally{
+      btn.textContent=originalText;btn.disabled=false;
     }
   }
   document.getElementById('ugcImageStep').className='wizard-hidden';
@@ -482,7 +515,8 @@ Requirements:
 - End with a natural CTA moment (product hold, gesture, or look at camera)
 
 Output ONLY the prompt paragraph. No headings, no explanations.`;
-  const result=await callClaude(system,user,'ugcResult',await getImageBase64('ugcRefImg'));
+  const img=await getImageBase64('ugcRefImg');
+  const result=await callClaude(system,user,'ugcResult',img?.data,img?.mediaType);
   if(result)showResult('ugcResult',result);
 };
 
