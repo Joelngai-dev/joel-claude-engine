@@ -313,7 +313,12 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
   const key=getKey();
   if(!key){showError(resultId,'Enter your Anthropic API key first.');return null;}
   const messages=[{role:'user',content:[]}];
-  if(imageData){messages[0].content.push({type:'image',source:{type:'base64',media_type:mediaType,data:imageData.split(',')[1]}});}
+  if(imageData){
+    const base64Data=imageData.split(',')[1];
+    console.log('[Claude API] Base64 data length:',base64Data?.length||0,'(~',((base64Data?.length||0)/1024/1024).toFixed(2),'MB)');
+    if(!base64Data||base64Data.length<100){console.error('[Claude API] Invalid base64 data');showError(resultId,'Image processing failed. Try a different image.');return null;}
+    messages[0].content.push({type:'image',source:{type:'base64',media_type:mediaType,data:base64Data}});
+  }
   messages[0].content.push({type:'text',text:user});
   console.log('[Claude API] Calling with model: claude-3-5-sonnet-20241022, image:',!!imageData);
   try{
