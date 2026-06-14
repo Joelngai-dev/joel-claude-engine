@@ -323,7 +323,7 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
   try{
     const controller=new AbortController();
     const timeoutId=setTimeout(()=>controller.abort(),30000);
-    const res=await fetch('/api/claude',{method:'POST',headers:{'content-type':'application/json','x-api-key':key},body:JSON.stringify({model:'claude-3-5-sonnet-20241022',max_tokens:4096,system,messages}),signal:controller.signal});
+    const res=await fetch('/api/claude',{method:'POST',headers:{'content-type':'application/json','x-api-key':key},body:JSON.stringify({max_tokens:4096,system,messages}),signal:controller.signal});
     clearTimeout(timeoutId);
     if(!res.ok){const err=await res.text();showError(resultId,`API Error ${res.status}: ${err}`);return null;}
     const data=await res.json();
