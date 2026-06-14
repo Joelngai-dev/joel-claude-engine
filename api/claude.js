@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: model || 'claude-sonnet-4-20250514',
+        model: model || 'claude-3-5-sonnet-20240620',
         max_tokens: max_tokens || 4096,
         system,
         messages,
