@@ -358,7 +358,7 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
     if(data.error){showError(resultId,`API Error: ${data.error.message||data.error}`);return null;}
     return data.content?.[0]?.text||'';
   }catch(e){
-    if(e.name==='AbortError'){showError(resultId,'Request timed out (30s).');}
+    if(e.name==='AbortError'){showError(resultId,'Request timed out (60s). Image too large or API slow.');}
     else{showError(resultId,`Network error: ${e.message}`);}
     return null;
   }
@@ -684,7 +684,8 @@ ${!name?'Note: The user did not provide a specific product name. Use a generic p
 📱 CAPTION (with hashtags for Singapore)
 🎯 SHOOTING NOTES (camera, lighting, props)`;
     const img=await getImageBase64('scriptProdImg');
-    const result=await callClaude(system,user,'scriptResult',img?.data,img?.mediaType);
+    // Don't send image on generation - already analyzed at step 1. Sending large base64 causes timeouts.
+    const result=await callClaude(system,user,'scriptResult',null,null);
     if(result){showResult('scriptResult',result);document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});}
   }catch(e){
     console.error('Generate error:',e);
@@ -768,7 +769,8 @@ Requirements:
 - End with a natural CTA moment
 Output ONLY the prompt paragraph. No headings, no explanations.`;
     const img=await getImageBase64('ugcRefImg');
-    const result=await callClaude(system,user,'ugcResult',img?.data,img?.mediaType);
+    // Don't send image on generation - already analyzed at step 1. Sending large base64 causes timeouts.
+    const result=await callClaude(system,user,'ugcResult',null,null);
     if(result){showResult('ugcResult',result);document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});}
   }catch(e){
     console.error('Generate error:',e);
