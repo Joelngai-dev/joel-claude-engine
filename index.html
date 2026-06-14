@@ -311,8 +311,8 @@
         <div class="wizard-question">📝 Review & Generate</div>
         <div class="wizard-summary" id="ugcSummary"></div>
         <div class="form-group" style="margin-top:16px;">
-          <label>Product / Subject Description (required)</label>
-          <input type="text" id="ugcSubject" placeholder="e.g. Woman pouring chili sauce into wok, steam rising">
+          <label>Product / Subject Description (optional — AI will auto-detect if left empty)</label>
+          <input type="text" id="ugcSubject" placeholder="Leave empty and AI will describe it from your image...">
         </div>
         <div class="wizard-nav">
           <button class="secondary-btn" onclick="ugcWizard.restart()">↺ Restart</button>
@@ -808,6 +808,7 @@ const ugcWizard=new AdaptiveWizardEngine({
     document.getElementById('ugcSummaryBox').className='wizard-hidden';
     document.getElementById('ugcDetected').className='wizard-detected';
     document.getElementById('ugcSubject').value='';
+    ugcWizard.detectedSubject=null;
     document.getElementById('ugcRefImg').value='';
     document.getElementById('ugcRefPreview').style.display='none';
   }
@@ -819,14 +820,17 @@ ugcWizard.onComplete=async(answers)=>{
   try{
     btn.textContent='🔄 Generating...';btn.disabled=true;
     const subject=document.getElementById('ugcSubject').value.trim();
-    if(!subject){showError('ugcResult','Enter a product / subject description.');return;}
+    let finalSubject=subject;
+    if(!finalSubject){
+      finalSubject=ugcWizard.detectedSubject||'A person showcasing a product in a lifestyle setting';
+    }
     const key=getKey();
     if(!key){showError('ugcResult','Enter your Anthropic API key first.');return;}
     const durMap={'5 seconds (Super short hook)':'5','15 seconds (Quick impact)':'15','30 seconds (Standard UGC)':'30','60 seconds (Full story)':'60'};
     const duration=durMap[answers[4].a]||'30';
     const system=`You are an expert AI video prompt engineer specializing in UGC (user-generated content) style prompts for AI video generators like Seedance, Runway, and similar tools. You create cinematic, detailed prompts that result in authentic, high-converting video content.`;
     const user=`Generate a ${duration}-second UGC video prompt.
-SUBJECT: ${subject}
+SUBJECT: ${finalSubject}
 VIDEO TYPE: ${answers[0].a}
 CAMERA STYLE: ${answers[1].a}
 LIGHTING MOOD: ${answers[2].a}
@@ -848,6 +852,14 @@ Output ONLY the prompt paragraph. No headings, no explanations.`;
     btn.textContent=originalText;btn.disabled=false;
   }
 };
+
+async function analyzeUgcSubject(inputId){
+  const img=await getImageBase64(inputId);
+  if(!img)return null;
+  const system=`You are a visual content analyst. Look at this image and describe the main subject in 1-2 sentences. Be specific about what is happening, what the person is doing, the setting, and any notable details. This description will be used as a video prompt subject. Keep it under 20 words. Respond with ONLY the description, no extra text.`;
+  const result=await callClaude(system,'Describe the main subject and action in this image in one concise sentence.','ugcResult',img.data,img.mediaType,500);
+  return result?result.trim():null;
+}
 
 async function analyzeUgcImage(inputId){
   const img=await getImageBase64(inputId);
@@ -872,6 +884,13 @@ async function startUgcWizard(){
   btn.textContent='Analyzing image...';btn.disabled=true;
   
   if(imgFile){
+    try{
+      const detectedSubject=await analyzeUgcSubject('ugcRefImg');
+      if(detectedSubject){
+        ugcWizard.detectedSubject=detectedSubject;
+        document.getElementById('ugcSubject').value=detectedSubject;
+      }
+    }catch(e){console.error('Subject analysis error:',e);}
     try{
       detectedValue=await analyzeUgcImage('ugcRefImg');
       if(detectedValue){
