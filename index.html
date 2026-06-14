@@ -135,6 +135,7 @@
           <input type="file" id="scriptProdImg" accept="image/*" onchange="previewImage('scriptProdImg','scriptProdPreview')">
           <div id="scriptProdPreview" style="margin-top:8px;max-width:200px;display:none;"><img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;"></div>
         </div>
+        <div class="error" id="scriptImageError" style="display:none;margin-bottom:12px;"></div>
         <div class="wizard-nav">
           <button class="generate" onclick="startScriptWizard()">Continue to Questions →</button>
         </div>
@@ -185,6 +186,7 @@
           <input type="file" id="ugcRefImg" accept="image/*" onchange="previewImage('ugcRefImg','ugcRefPreview')">
           <div id="ugcRefPreview" style="margin-top:8px;max-width:200px;display:none;"><img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;"></div>
         </div>
+        <div class="error" id="ugcImageError" style="display:none;margin-bottom:12px;"></div>
         <div class="wizard-nav">
           <button class="generate" onclick="startUgcWizard()">Continue to Questions →</button>
         </div>
@@ -381,9 +383,13 @@ const scriptQuestions=[
 async function startScriptWizard(){
   const btn=document.querySelector('#scriptImageStep .generate');
   const originalText=btn.textContent;
+  const errorEl=document.getElementById('scriptImageError');
   const imgFile=document.getElementById('scriptProdImg').files[0];
   let prefilled=[];let detectedValue='';
+  errorEl.style.display='none';errorEl.textContent='';
   if(imgFile){
+    const key=getKey();
+    if(!key){errorEl.textContent='Enter your Anthropic API key first (top of page).';errorEl.style.display='block';return;}
     btn.textContent='Analyzing image...';btn.disabled=true;
     try{
       const detected=await analyzeProductImage('scriptProdImg');
@@ -392,8 +398,11 @@ async function startScriptWizard(){
         detectedValue=detected;
         document.getElementById('scriptDetected').className='wizard-detected visible';
         document.getElementById('scriptDetectedValue').textContent=detected;
+      }else{
+        errorEl.textContent='Could not detect product from image. Proceeding with manual questions.';errorEl.style.display='block';
       }
     }catch(e){
+      errorEl.textContent='Analysis error: '+e.message;errorEl.style.display='block';
       console.error('Image analysis failed:',e);
     }finally{
       btn.textContent=originalText;btn.disabled=false;
@@ -463,9 +472,13 @@ const ugcQuestions=[
 async function startUgcWizard(){
   const btn=document.querySelector('#ugcImageStep .generate');
   const originalText=btn.textContent;
+  const errorEl=document.getElementById('ugcImageError');
   const imgFile=document.getElementById('ugcRefImg').files[0];
   let prefilled=[];let detectedValue='';
+  errorEl.style.display='none';errorEl.textContent='';
   if(imgFile){
+    const key=getKey();
+    if(!key){errorEl.textContent='Enter your Anthropic API key first (top of page).';errorEl.style.display='block';return;}
     btn.textContent='Analyzing image...';btn.disabled=true;
     try{
       const detected=await analyzeUgcImage('ugcRefImg');
@@ -474,8 +487,11 @@ async function startUgcWizard(){
         detectedValue=detected;
         document.getElementById('ugcDetected').className='wizard-detected visible';
         document.getElementById('ugcDetectedValue').textContent=detected;
+      }else{
+        errorEl.textContent='Could not detect subject from image. Proceeding with manual questions.';errorEl.style.display='block';
       }
     }catch(e){
+      errorEl.textContent='Analysis error: '+e.message;errorEl.style.display='block';
       console.error('Image analysis failed:',e);
     }finally{
       btn.textContent=originalText;btn.disabled=false;
