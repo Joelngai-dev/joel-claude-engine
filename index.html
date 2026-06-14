@@ -393,7 +393,7 @@ class WizardEngine{
     });
     const customDiv=document.createElement('div');customDiv.className='wizard-custom';
     const customInput=document.createElement('input');customInput.type='text';customInput.placeholder='E — Type custom answer...';customInput.id=`${this.key}CustomInput`;
-    const customBtn=document.createElement('button');customBtn.className='secondary-btn';customBtn.textContent='Continue';customBtn.onclick=()=>{const v=customInput.value.trim();if(v)this.select(4,v);};
+    const customBtn=document.createElement('button');customBtn.className='secondary-btn';customBtn.textContent='Continue';customBtn.onclick=()=>{const v=customInput.value.trim();if(v)this.select(q.options.length,v);};
     customDiv.appendChild(customInput);customDiv.appendChild(customBtn);opts.appendChild(customDiv);
     document.getElementById(this.questionBoxId).className='wizard-visible';
     document.getElementById(this.summaryBoxId).className='wizard-hidden';
@@ -428,15 +428,26 @@ async function startScriptWizard(){
   const imgFile=document.getElementById('scriptProdImg').files[0];
   let prefilled=[];let detectedValue='';
   errorEl.style.display='none';errorEl.textContent='';
-  // Skip image analysis for now - API has issues with image size validation
-  // Image will still be used in final generation
-  btn.textContent='Loading...';btn.disabled=true;
-  setTimeout(()=>{
-    btn.textContent=originalText;btn.disabled=false;
-    document.getElementById('scriptImageStep').className='wizard-hidden';
-    document.getElementById('scriptQuestionBox').className='wizard-visible';
-    scriptWizard.start(prefilled,detectedValue);
-  },500);
+  
+  btn.textContent='Analyzing image...';btn.disabled=true;
+  
+  if(imgFile){
+    try{
+      detectedValue=await analyzeProductImage('scriptProdImg');
+      if(detectedValue){
+        prefilled=[{q:scriptQuestions[0].question,a:detectedValue,idx:scriptQuestions[0].options.indexOf(detectedValue)}];
+        document.getElementById('scriptDetectedValue').textContent=detectedValue;
+        document.getElementById('scriptDetected').className='wizard-detected visible';
+      }
+    }catch(e){
+      console.error('Image analysis error:',e);
+    }
+  }
+  
+  btn.textContent=originalText;btn.disabled=false;
+  document.getElementById('scriptImageStep').className='wizard-hidden';
+  document.getElementById('scriptQuestionBox').className='wizard-visible';
+  scriptWizard.start(prefilled,detectedValue);
 }
 
 const scriptWizard=new WizardEngine({
@@ -502,15 +513,26 @@ async function startUgcWizard(){
   const imgFile=document.getElementById('ugcRefImg').files[0];
   let prefilled=[];let detectedValue='';
   errorEl.style.display='none';errorEl.textContent='';
-  // Skip image analysis for now - API has issues with image size validation
-  // Image will still be used in final generation
-  btn.textContent='Loading...';btn.disabled=true;
-  setTimeout(()=>{
-    btn.textContent=originalText;btn.disabled=false;
-    document.getElementById('ugcImageStep').className='wizard-hidden';
-    document.getElementById('ugcQuestionBox').className='wizard-visible';
-    ugcWizard.start(prefilled,detectedValue);
-  },500);
+  
+  btn.textContent='Analyzing image...';btn.disabled=true;
+  
+  if(imgFile){
+    try{
+      detectedValue=await analyzeUgcImage('ugcRefImg');
+      if(detectedValue){
+        prefilled=[{q:ugcQuestions[0].question,a:detectedValue,idx:ugcQuestions[0].options.indexOf(detectedValue)}];
+        document.getElementById('ugcDetectedValue').textContent=detectedValue;
+        document.getElementById('ugcDetected').className='wizard-detected visible';
+      }
+    }catch(e){
+      console.error('Image analysis error:',e);
+    }
+  }
+  
+  btn.textContent=originalText;btn.disabled=false;
+  document.getElementById('ugcImageStep').className='wizard-hidden';
+  document.getElementById('ugcQuestionBox').className='wizard-visible';
+  ugcWizard.start(prefilled,detectedValue);
 }
 
 const ugcWizard=new WizardEngine({
