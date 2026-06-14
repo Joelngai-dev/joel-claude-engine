@@ -255,13 +255,27 @@
             </div>
             
             <div class="product-info-field">
-              <label>Language / Tone</label>
-              <select id="scriptInfoLanguage">
-                <option value="English">English (professional)</option>
-                <option value="Singlish">Singlish (relatable, casual)</option>
-                <option value="Chinese">Chinese (Mandarin)</option>
-                <option value="Mixed">Mixed (English + Singlish)</option>
+              <label>Video Format</label>
+              <select id="scriptInfoFormat">
+                <option value="1x10s">1×10s — Single 10-second hook</option>
+                <option value="3x10s" selected>3×10s — Three-part series (Hook → Demo → CTA)</option>
+                <option value="1x30s">1×30s — Full 30-second story</option>
               </select>
+            </div>
+            
+            <div class="product-info-field">
+              <label>Language</label>
+              <select id="scriptInfoLanguage">
+                <option value="English">English</option>
+                <option value="Chinese">Chinese (中文)</option>
+              </select>
+            </div>
+            
+            <div class="product-info-field">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="scriptInfoDialogues" checked style="width:auto;">
+                Include spoken dialogues in script
+              </label>
             </div>
           </div>
           
@@ -614,13 +628,43 @@ async function generateScriptFromProductInfo(){
     const cta=document.getElementById('scriptInfoCTA').value.trim();
     const tone=document.getElementById('scriptInfoTone').value.trim();
     const competitive=document.getElementById('scriptInfoCompetitive').value.trim();
+    const format=document.getElementById('scriptInfoFormat').value;
     const language=document.getElementById('scriptInfoLanguage').value;
+    const includeDialogues=document.getElementById('scriptInfoDialogues').checked;
     
     if(!name){showError('scriptResult','Enter a product name.');return;}
     
-    const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs. You are an expert at creating scripts that feel authentic and specific to the exact product being promoted.`;
+    const formatInstructions={
+      '1x10s':`Format: ONE single 10-second video.
+- Structure: [0-3s] HOOK → [3-8s] BODY → [8-10s] CTA
+- Each timestamp block must be 2-3 seconds max
+- Total: exactly 10 seconds`,
+      '3x10s':`Format: THREE 10-second videos (a series).
+- Video 1 [0-10s]: HOOK — grab attention, create curiosity
+- Video 2 [0-10s]: DEMO / PROOF — show the product in action, reveal the benefit
+- Video 3 [0-10s]: CTA / RESULT — call to action, show transformation/outcome
+- Each video is standalone but works as a series
+- Each timestamp block must be 2-3 seconds max`,
+      '1x30s':`Format: ONE single 30-second video.
+- Structure: [0-3s] HOOK → [3-12s] PROBLEM / SETUP → [12-22s] SOLUTION / DEMO → [22-30s] CTA
+- Each timestamp block must be 3-5 seconds
+- Total: exactly 30 seconds`
+    };
     
-    const user=`Generate a TikTok video script for this EXACT product:
+    const dialogueInstruction=includeDialogues
+      ?`INCLUDE SPOKEN DIALOGUES:
+- Write the EXACT words the person should say on camera
+- Dialogues should sound natural, conversational, not scripted
+- Mix of on-camera speaking and voiceover narration
+- For 3×10s format: each video should have 1-2 short lines of dialogue`
+      :`NO DIALOGUES — Use visual storytelling only:
+- Describe what happens visually in each shot
+- Use text overlays for key messages (suggest the text)
+- Focus on actions, reactions, and visual demonstrations`;
+    
+    const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs. You are an expert at creating scripts that feel authentic and specific to the exact product being promoted.`;
+    
+    const user=`Generate a TikTok video script for this EXACT product.
 
 BRAND: ${brand||'Not specified'}
 PRODUCT NAME: ${name}
@@ -641,24 +685,29 @@ BRAND TONE: ${tone}
 COMPETITIVE ANGLE: ${competitive||'Not specified'}
 LANGUAGE: ${language}
 
+FORMAT REQUIREMENTS:
+${formatInstructions[format]}
+
+${dialogueInstruction}
+
 IMPORTANT:
-- Use the EXACT product name "${name}" throughout the script
-- Reference the specific visual details from the visual description in the shooting notes
-- Make the selling points feel natural and authentic, not salesy
-- The script should feel like it was written specifically for THIS product, not generic
-- Use Singapore cultural references where appropriate (Singlish, local food culture, hawker culture, etc.)
-- The hook should be attention-grabbing and specific to the product
-- Mention the brand name naturally if it's a recognizable brand
-- Use the competitive angle as a subtle differentiator in the script
+- Use the EXACT product name "${name}" throughout
+- Reference specific visual details in shooting notes
+- Make selling points feel natural, not salesy
+- Script should feel written specifically for THIS product
+- Use Singapore cultural references where appropriate
+- Hook must be attention-grabbing and product-specific
+- Mention brand name naturally if recognizable
+- Use competitive angle as a subtle differentiator
 
-Format:
+OUTPUT FORMAT:
 🎬 VIDEO TITLE
-📊 STRUCTURE (Hook, Body, CTA with timestamps)
-📝 FULL SCRIPT (with timestamps - each line should have [0-3s], [3-8s], [8-12s], etc.)
-📱 CAPTION (with hashtags for Singapore - include #Singapore, #TikTokSG, #SGTikTok, and category-specific tags)
-🎯 SHOOTING NOTES (camera angles, lighting, props, specific shots based on the visual description)`;
+📊 STRUCTURE (with timestamps)
+📝 FULL SCRIPT (each line: [TIMESTAMP] ACTION + DIALOGUE)
+📱 CAPTION (with Singapore hashtags: #Singapore #TikTokSG #SGTikTok + category tags)
+🎯 SHOOTING NOTES (camera, lighting, props, angles)`;
 
-    const result=await callClaude(system,user,'scriptResult',null,null,2000);
+    const result=await callClaude(system,user,'scriptResult',null,null,2500);
     if(result){showResult('scriptResult',result);}
   }catch(e){
     console.error('Generate error:',e);
