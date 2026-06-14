@@ -295,7 +295,7 @@ function switchTab(id){document.querySelectorAll('.tab').forEach(t=>t.classList.
 
 // === HELPERS ===
 function showResult(id,text){const el=document.getElementById(id);el.querySelector('pre').textContent=text;el.classList.add('visible');el.scrollIntoView({behavior:'smooth'});}
-function showError(id,msg){const el=document.getElementById(id);el.querySelector('pre').textContent='Error: '+msg;el.classList.add('visible');}
+function showError(id,msg){const el=document.getElementById(id);el.querySelector('pre').textContent='Error: '+msg;el.classList.add('visible');el.scrollIntoView({behavior:'smooth'});}
 function copyResult(id){const text=document.getElementById(id).querySelector('pre').textContent;navigator.clipboard.writeText(text).then(()=>alert('Copied!'));}
 function previewImage(inputId,previewId){const file=document.getElementById(inputId).files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const img=document.getElementById(previewId).querySelector('img');img.src=e.target.result;document.getElementById(previewId).style.display='block';};reader.readAsDataURL(file);}
 
@@ -662,28 +662,37 @@ const scriptWizard=new AdaptiveWizardEngine({
 });
 
 scriptWizard.onComplete=async(answers)=>{
-  const name=document.getElementById('scriptProdName').value.trim();
-  const desc=document.getElementById('scriptProdDesc').value.trim();
-  
-  const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs.`;
-  
-  const user=`Generate a TikTok video script for this product:
+  const btn=document.querySelector('#scriptSummaryBox .generate');
+  const originalText=btn.textContent;
+  try{
+    btn.textContent='🔄 Generating...';btn.disabled=true;
+    const name=document.getElementById('scriptProdName').value.trim();
+    const desc=document.getElementById('scriptProdDesc').value.trim();
+    const key=getKey();
+    if(!key){showError('scriptResult','Enter your Anthropic API key first.');document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});return;}
+    const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs.`;
+    const user=`Generate a TikTok video script for this product:
 ${name?'PRODUCT: '+name+'\n':''}${desc?'DESCRIPTION: '+desc+'\n':''}PRODUCT TYPE: ${answers[0].a}
 CONTENT STYLE: ${answers[1].a}
 TARGET AUDIENCE: ${answers[2].a}
 CALL TO ACTION: ${answers[3].a}
 LANGUAGE / TONE: ${answers[4].a}
-
 ${!name?'Note: The user did not provide a specific product name. Use a generic placeholder like "this product" or "this item" in the script, and let them fill in the actual name later.\n':''}Format:
 🎬 VIDEO TITLE
 📊 STRUCTURE (Hook, Body, CTA with timestamps)
 📝 FULL SCRIPT (with timestamps)
 📱 CAPTION (with hashtags for Singapore)
 🎯 SHOOTING NOTES (camera, lighting, props)`;
-
-  const img=await getImageBase64('scriptProdImg');
-  const result=await callClaude(system,user,'scriptResult',img?.data,img?.mediaType);
-  if(result)showResult('scriptResult',result);
+    const img=await getImageBase64('scriptProdImg');
+    const result=await callClaude(system,user,'scriptResult',img?.data,img?.mediaType);
+    if(result){showResult('scriptResult',result);document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});}
+  }catch(e){
+    console.error('Generate error:',e);
+    showError('scriptResult','Failed to generate: '+e.message);
+    document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});
+  }finally{
+    btn.textContent=originalText;btn.disabled=false;
+  }
 };
 
 async function startScriptWizard(){
@@ -733,22 +742,23 @@ const ugcWizard=new AdaptiveWizardEngine({
 });
 
 ugcWizard.onComplete=async(answers)=>{
-  const subject=document.getElementById('ugcSubject').value.trim();
-  if(!subject){showError('ugcResult','Enter a product / subject description.');return;}
-  
-  const durMap={'5 seconds (Super short hook)':'5','15 seconds (Quick impact)':'15','30 seconds (Standard UGC)':'30','60 seconds (Full story)':'60'};
-  const duration=durMap[answers[4].a]||'30';
-  
-  const system=`You are an expert AI video prompt engineer specializing in UGC (user-generated content) style prompts for AI video generators like Seedance, Runway, and similar tools. You create cinematic, detailed prompts that result in authentic, high-converting video content.`;
-  
-  const user=`Generate a ${duration}-second UGC video prompt.
-
+  const btn=document.querySelector('#ugcSummaryBox .generate');
+  const originalText=btn.textContent;
+  try{
+    btn.textContent='🔄 Generating...';btn.disabled=true;
+    const subject=document.getElementById('ugcSubject').value.trim();
+    if(!subject){showError('ugcResult','Enter a product / subject description.');document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});return;}
+    const key=getKey();
+    if(!key){showError('ugcResult','Enter your Anthropic API key first.');document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});return;}
+    const durMap={'5 seconds (Super short hook)':'5','15 seconds (Quick impact)':'15','30 seconds (Standard UGC)':'30','60 seconds (Full story)':'60'};
+    const duration=durMap[answers[4].a]||'30';
+    const system=`You are an expert AI video prompt engineer specializing in UGC (user-generated content) style prompts for AI video generators like Seedance, Runway, and similar tools. You create cinematic, detailed prompts that result in authentic, high-converting video content.`;
+    const user=`Generate a ${duration}-second UGC video prompt.
 SUBJECT: ${subject}
 VIDEO TYPE: ${answers[0].a}
 CAMERA STYLE: ${answers[1].a}
 LIGHTING MOOD: ${answers[2].a}
 MOTION: ${answers[3].a}
-
 Requirements:
 - ONE continuous paragraph, ${duration=='5'?'30-40':duration=='15'?'60-80':'180-220'} words
 - Cinematic but authentic (real person, not influencer-polished)
@@ -756,12 +766,17 @@ Requirements:
 - Lighting description matching the mood
 - Emotional tone
 - End with a natural CTA moment
-
 Output ONLY the prompt paragraph. No headings, no explanations.`;
-
-  const img=await getImageBase64('ugcRefImg');
-  const result=await callClaude(system,user,'ugcResult',img?.data,img?.mediaType);
-  if(result)showResult('ugcResult',result);
+    const img=await getImageBase64('ugcRefImg');
+    const result=await callClaude(system,user,'ugcResult',img?.data,img?.mediaType);
+    if(result){showResult('ugcResult',result);document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});}
+  }catch(e){
+    console.error('Generate error:',e);
+    showError('ugcResult','Failed to generate: '+e.message);
+    document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});
+  }finally{
+    btn.textContent=originalText;btn.disabled=false;
+  }
 };
 
 async function startUgcWizard(){
