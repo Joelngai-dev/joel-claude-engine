@@ -54,8 +54,11 @@
   .wizard-option{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all 0.15s;}
   .wizard-option:hover{border-color:var(--accent);background:rgba(255,107,53,0.08);}
   .wizard-option.selected{border-color:var(--accent);background:rgba(255,107,53,0.15);}
-  .wizard-option-label{width:32px;height:32px;border-radius:6px;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0;}
-  .wizard-option-text{font-size:14px;}
+  .wizard-option.recommended{border-color:var(--accent2);background:rgba(0,212,170,0.08);position:relative;}
+  .wizard-option.recommended::after{content:'★ Recommended';position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--accent2);background:rgba(0,212,170,0.15);padding:2px 8px;border-radius:4px;}
+  .wizard-recommended-note{font-size:12px;color:var(--accent2);margin-bottom:10px;font-style:italic;}
+  .wizard-option-label.recommended{background:var(--accent2);color:#000;}
+
   .wizard-custom{display:flex;gap:8px;margin-top:8px;}
   .wizard-custom input{flex:1;}
   .wizard-custom button{white-space:nowrap;}
@@ -453,10 +456,23 @@ class AdaptiveWizardEngine{
     // Render options A/B/C/D/E
     const opts=document.getElementById(this.key+'Options');
     opts.innerHTML='';
+    
+    // Check for recommended option
+    let recIdx=-1;
+    if(q.getRecommended){
+      recIdx=q.getRecommended(this.answers);
+      if(recIdx>=0){
+        const recNote=document.createElement('div');
+        recNote.className='wizard-recommended-note';
+        recNote.textContent='★ Best choice for your product';
+        opts.appendChild(recNote);
+      }
+    }
+    
     q.options.forEach((opt,i)=>{
       const btn=document.createElement('div');
-      btn.className='wizard-option';
-      btn.innerHTML=`<div class="wizard-option-label">${String.fromCharCode(65+i)}</div><div class="wizard-option-text">${opt}</div>`;
+      btn.className='wizard-option'+(i===recIdx?' recommended':'');
+      btn.innerHTML=`<div class="wizard-option-label${i===recIdx?' recommended':''}">${String.fromCharCode(65+i)}</div><div class="wizard-option-text">${opt}</div>`;
       btn.onclick=()=>this.select(i,opt);
       opts.appendChild(btn);
     });
@@ -520,7 +536,20 @@ const scriptQuestions=[
       if(type==='Tech & Gadgets') return ['Review / Comparison','Unboxing / First Look','Tutorial / How-to','Tech Hack / Hidden Feature'];
       return ['Product Review / Demo','Storytelling / Drama','Trending / Challenge','Educational / How-to'];
     },
-    adaptiveNote:(answers)=>`Options adapted for ${answers[0]?.a || 'your product'}`
+    getRecommended:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Food & Beverage') return 0;
+      if(type==='Beauty & Health') return 0;
+      if(type==='Tech & Gadgets') return 0;
+      return 0;
+    },
+    adaptiveNote:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Food & Beverage') return 'Recipe / Cooking Demo performs best for food products';
+      if(type==='Beauty & Health') return 'Product Review / Demo converts best for beauty';
+      if(type==='Tech & Gadgets') return 'Review / Comparison builds trust for tech';
+      return 'Product Review / Demo is the safest choice';
+    }
   },
   {
     question:'Who is your target audience?',
@@ -531,17 +560,38 @@ const scriptQuestions=[
       if(type==='Tech & Gadgets') return ['Tech Enthusiasts','Students / Budget Buyers','Professionals / Productivity','Gamers'];
       return ['Gen Z (18-25)','Millennials (26-40)','Parents / Families','PHV Drivers / Workers'];
     },
-    adaptiveNote:(answers)=>`Target audience tailored for ${answers[0]?.a || 'your product'}`
+    getRecommended:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Food & Beverage') return 0;
+      if(type==='Beauty & Health') return 0;
+      if(type==='Tech & Gadgets') return 0;
+      return 2;
+    },
+    adaptiveNote:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Food & Beverage') return 'Foodies are the most engaged audience for food content';
+      if(type==='Beauty & Health') return 'Skincare enthusiasts actively search for beauty tips';
+      if(type==='Tech & Gadgets') return 'Tech enthusiasts are early adopters and drive shares';
+      return 'Parents / Families have high purchasing power';
+    }
   },
   {
     question:'What call-to-action do you want?',
     options:['Shop now / Buy link','Follow for more tips','Comment your experience','Share with a friend'],
-    adaptiveNote:(answers)=>'Choose the CTA that matches your goal'
+    getRecommended:()=>0,
+    adaptiveNote:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Food & Beverage') return 'Shop now drives immediate purchases for food';
+      if(type==='Beauty & Health') return 'Shop now converts best for impulse beauty buys';
+      if(type==='Tech & Gadgets') return 'Shop now works for tech with clear value prop';
+      return 'Shop now is the best for direct sales';
+    }
   },
   {
     question:'What language / tone?',
     options:['English (professional)','Singlish (relatable, casual)','Chinese (Mandarin)','Mixed (English + Singlish)'],
-    adaptiveNote:(answers)=>'Pick the tone that resonates with your audience'
+    getRecommended:()=>3,
+    adaptiveNote:()=>'Mixed (English + Singlish) resonates most with Singapore audiences'
   }
 ];
 
@@ -560,22 +610,38 @@ const ugcQuestions=[
       if(type==='Unboxing / First look') return ['Top-down unboxing','Face-cam reaction','Hand-focused reveal','Cinematic reveal'];
       return ['Split screen comparison','Time-lapse transformation','Before / After swipe','Progressive reveal'];
     },
-    adaptiveNote:(answers)=>`Camera style matched to ${answers[0]?.a || 'your video type'}`
+    getRecommended:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Product showcase') return 0; // Close-up / Macro detail
+      if(type==='Lifestyle / Real use') return 0; // Candid / Documentary
+      if(type==='Unboxing / First look') return 0; // Top-down unboxing
+      return 0; // Split screen comparison
+    },
+    adaptiveNote:(answers)=>{
+      const type=answers[0]?.a;
+      if(type==='Product showcase') return 'Close-up detail shots show product quality best';
+      if(type==='Lifestyle / Real use') return 'Candid documentary style feels most authentic';
+      if(type==='Unboxing / First look') return 'Top-down is the classic unboxing angle';
+      return 'Split screen is the most effective for comparisons';
+    }
   },
   {
     question:'What lighting mood?',
     options:['Bright / Natural daylight','Warm / Cozy indoor','Dramatic / High contrast','Clean / Studio white'],
-    adaptiveNote:(answers)=>'Set the mood that fits your brand'
+    getRecommended:()=>0, // Bright / Natural daylight is safest
+    adaptiveNote:()=>'Bright natural daylight works for almost all content types'
   },
   {
     question:'What motion / camera movement?',
     options:['Static / Stable tripod','Slow pan / Gentle movement','Handheld / Slightly shaky','Dynamic / Fast cuts'],
-    adaptiveNote:(answers)=>'Choose movement that matches the energy'
+    getRecommended:()=>1, // Slow pan / Gentle movement is best for UGC
+    adaptiveNote:()=>'Slow pan feels premium while keeping that authentic UGC vibe'
   },
   {
     question:'What duration?',
     options:['5 seconds (Super short hook)','15 seconds (Quick impact)','30 seconds (Standard UGC)','60 seconds (Full story)'],
-    adaptiveNote:(answers)=>'Pick the length that fits your platform'
+    getRecommended:()=>2, // 30 seconds is the sweet spot
+    adaptiveNote:()=>'30 seconds is the standard UGC length with best retention'
   }
 ];
 
