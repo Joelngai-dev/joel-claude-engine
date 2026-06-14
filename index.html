@@ -309,9 +309,12 @@ async function analyzeProductImage(inputId){
   const user=`What product category is this?`;
   const result=await callClaude(system,user,'scriptResult',img.data,img.mediaType);
   if(!result)return null;
-  const validTypes=['Food & Beverage','Beauty & Health','Tech & Gadgets','Home & Lifestyle'];
-  const detected=validTypes.find(t=>result.includes(t));
-  return detected||null;
+  const normalized=result.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
+  if(normalized.includes('food')||normalized.includes('beverage')||normalized.includes('drink')||normalized.includes('snack'))return'Food & Beverage';
+  if(normalized.includes('beauty')||normalized.includes('health')||normalized.includes('skin')||normalized.includes('cosmetic')||normalized.includes('makeup'))return'Beauty & Health';
+  if(normalized.includes('tech')||normalized.includes('gadget')||normalized.includes('electronic')||normalized.includes('device')||normalized.includes('phone')||normalized.includes('computer'))return'Tech & Gadgets';
+  if(normalized.includes('home')||normalized.includes('lifestyle')||normalized.includes('house')||normalized.includes('decor')||normalized.includes('kitchen'))return'Home & Lifestyle';
+  return null;
 }
 async function analyzeUgcImage(inputId){
   const img=await getImageBase64(inputId);
@@ -320,9 +323,12 @@ async function analyzeUgcImage(inputId){
   const user=`What video type fits this subject best?`;
   const result=await callClaude(system,user,'ugcResult',img.data,img.mediaType);
   if(!result)return null;
-  const validTypes=['Product showcase','Lifestyle / Real use','Unboxing / First look','Before & After'];
-  const detected=validTypes.find(t=>result.includes(t));
-  return detected||null;
+  const normalized=result.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
+  if(normalized.includes('product')||normalized.includes('showcase'))return'Product showcase';
+  if(normalized.includes('lifestyle')||normalized.includes('real')||normalized.includes('use')||normalized.includes('moment'))return'Lifestyle / Real use';
+  if(normalized.includes('unbox')||normalized.includes('first look')||normalized.includes('review'))return'Unboxing / First look';
+  if(normalized.includes('before')||normalized.includes('after')||normalized.includes('transformation')||normalized.includes('compare'))return'Before & After';
+  return null;
 }
 
 // === WIZARD ENGINE ===
