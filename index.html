@@ -200,6 +200,11 @@
           
           <div class="product-info-grid">
             <div class="product-info-field">
+              <label>Brand Name</label>
+              <input type="text" id="scriptInfoBrand" placeholder="e.g. Maggi, Nestle, L'Oreal">
+            </div>
+            
+            <div class="product-info-field">
               <label>Product Name</label>
               <input type="text" id="scriptInfoName" placeholder="e.g. Selly's Chili Garlic Sauce">
             </div>
@@ -212,6 +217,11 @@
             <div class="product-info-field">
               <label>Key Selling Points (one per line)</label>
               <textarea id="scriptInfoFeatures" placeholder="• Premium quality ingredients&#10;• Authentic Singapore recipe&#10;• No preservatives added" style="min-height:80px;"></textarea>
+            </div>
+            
+            <div class="product-info-field">
+              <label>Visible Text on Packaging</label>
+              <textarea id="scriptInfoVisibleText" placeholder="All text visible on the packaging..." style="min-height:60px;"></textarea>
             </div>
             
             <div class="product-info-field">
@@ -237,6 +247,11 @@
             <div class="product-info-field">
               <label>Brand Tone</label>
               <input type="text" id="scriptInfoTone" placeholder="e.g. Warm, authentic, premium">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Competitive Angle</label>
+              <input type="text" id="scriptInfoCompetitive" placeholder="e.g. Only brand with real chili flakes, not powder">
             </div>
             
             <div class="product-info-field">
@@ -456,7 +471,7 @@ async function analyzeProduct(){
   document.getElementById('scriptAnalysisStep').className='wizard-visible';
   document.getElementById('scriptAnalysisStatus').textContent='Uploading and compressing image...';
   
-  const img=await getImageBase64('scriptProdImg');
+  const img=await compressImage('scriptProdImg',1024,1024,0.85);
   if(!img){
     document.getElementById('scriptImageStep').className='wizard-visible';
     document.getElementById('scriptAnalysisStep').className='wizard-hidden';
@@ -467,32 +482,40 @@ async function analyzeProduct(){
   
   document.getElementById('scriptAnalysisStatus').textContent='Claude is analyzing your product...';
   
-  const system=`You are an expert product analyst and TikTok marketing strategist based in Singapore. Look at the product image and extract detailed information that will be used to create a high-converting TikTok script.
+  const system=`You are an expert product analyst and TikTok marketing strategist based in Singapore. Your job is to look at a product image and extract EVERY possible detail a marketer would need. Do not guess vaguely — be specific.
 
-Extract the following information:
-1. Product Name - What is this product called? (If not visible, make a reasonable guess based on appearance)
-2. Product Category - What category? (Food & Beverage, Beauty & Health, Tech & Gadgets, Home & Lifestyle, Fashion, etc.)
-3. Key Selling Points - 3-5 specific selling points visible from the image (ingredients, features, benefits, packaging quality, etc.)
-4. Visual Description - Describe what the product looks like, packaging, colors, size, texture, anything notable
-5. Target Audience - Who would buy this? Be specific (e.g., "busy parents who cook at home", "young professionals into skincare")
-6. Recommended Content Style - Best TikTok format for this product (e.g., "Recipe / Cooking Demo", "Product Review / Demo", "Unboxing / First Look")
-7. Recommended CTA - Best call-to-action (e.g., "Shop now link in bio", "Comment if you want the recipe")
-8. Brand Tone - What tone fits this product? (premium, affordable, fun, serious, warm, edgy, etc.)
-9. Estimated Price Point - If visible or inferable from packaging/brand
+CRITICAL: Read all visible text on the packaging carefully. If you can see a brand name, product name, ingredients list, or any text — extract it exactly.
+
+Extract ALL of the following:
+1. BRAND NAME — What brand is this? Read the logo/packaging text carefully. If unclear, say "Not visible"
+2. PRODUCT NAME — Full product name including variant/flavor/size if visible (e.g., "Maggi 2-Minute Noodles Curry Flavour 79g")
+3. PRODUCT CATEGORY — Category + subcategory (e.g., "Food & Beverage > Instant Noodles", "Beauty & Health > Skincare > Moisturizer")
+4. KEY SELLING POINTS — 3-5 specific points visible from the image. Read ingredients, claims, certifications on packaging. Be specific (e.g., "Contains real chili flakes", "Halal certified", "No MSG added")
+5. VISIBLE TEXT — List ALL text you can read on the packaging (brand, product name, tagline, ingredients, claims, weight, country of origin, etc.)
+6. VISUAL DESCRIPTION — Detailed description of packaging, colors, materials, size, texture, design style
+7. TARGET AUDIENCE — Specific buyer persona (e.g., "Budget-conscious parents with kids aged 5-12", "Health-conscious millennials who gym regularly")
+8. CONTENT STYLE — Best TikTok format for THIS specific product
+9. RECOMMENDED CTA — Best call-to-action for THIS product and audience
+10. BRAND TONE — What tone fits this brand? (premium, mass-market, fun, serious, warm, edgy, traditional, modern)
+11. PRICE POINT — Estimated price range if inferable from packaging quality/brand positioning
+12. COMPETITIVE ANGLE — What makes this product different from generic alternatives?
 
 Respond ONLY in this exact format:
-PRODUCT_NAME: [name]
-CATEGORY: [category]
+BRAND: [brand name or "Not visible"]
+PRODUCT_NAME: [full product name]
+CATEGORY: [category > subcategory]
 SELLING_POINTS:
-- [point 1]
-- [point 2]
-- [point 3]
-VISUAL: [description]
-AUDIENCE: [audience]
-CONTENT_STYLE: [style]
-CTA: [cta]
-TONE: [tone]
-PRICE: [price or "Not visible"]`;
+- [specific point 1]
+- [specific point 2]
+- [specific point 3]
+VISIBLE_TEXT: [all text you can read on packaging]
+VISUAL: [detailed visual description]
+AUDIENCE: [specific target audience]
+CONTENT_STYLE: [best TikTok format]
+CTA: [recommended call-to-action]
+TONE: [brand tone]
+PRICE: [estimated price or "Not visible"]
+COMPETITIVE_ANGLE: [what makes it different]`;
   
   const result=await callClaude(system,'Analyze this product image in detail.','scriptResult',img.data,img.mediaType,2000);
   
@@ -506,14 +529,17 @@ PRICE: [price or "Not visible"]`;
   const productInfo=parseProductAnalysis(result);
   
   // Populate product info page
+  document.getElementById('scriptInfoBrand').value=productInfo.brand||'';
   document.getElementById('scriptInfoName').value=productInfo.name||'';
   document.getElementById('scriptInfoCategory').value=productInfo.category||'';
   document.getElementById('scriptInfoFeatures').value=productInfo.sellingPoints||'';
+  document.getElementById('scriptInfoVisibleText').value=productInfo.visibleText||'';
   document.getElementById('scriptInfoVisual').value=productInfo.visual||'';
   document.getElementById('scriptInfoAudience').value=productInfo.audience||'';
   document.getElementById('scriptInfoStyle').value=productInfo.contentStyle||'';
   document.getElementById('scriptInfoCTA').value=productInfo.cta||'';
   document.getElementById('scriptInfoTone').value=productInfo.tone||'';
+  document.getElementById('scriptInfoCompetitive').value=productInfo.competitiveAngle||'';
   document.getElementById('scriptInfoDetectedCategory').textContent=productInfo.category||'Product detected';
   
   // Show product image in review page
@@ -538,14 +564,17 @@ function parseProductAnalysis(text){
     const trimmed=line.trim();
     if(!trimmed)continue;
     
-    if(trimmed.startsWith('PRODUCT_NAME:')){result.name=trimmed.substring('PRODUCT_NAME:'.length).trim();inSellingPoints=false;}
+    if(trimmed.startsWith('BRAND:')){result.brand=trimmed.substring('BRAND:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('PRODUCT_NAME:')){result.name=trimmed.substring('PRODUCT_NAME:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('CATEGORY:')){result.category=trimmed.substring('CATEGORY:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('VISIBLE_TEXT:')){result.visibleText=trimmed.substring('VISIBLE_TEXT:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('VISUAL:')){result.visual=trimmed.substring('VISUAL:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('AUDIENCE:')){result.audience=trimmed.substring('AUDIENCE:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('CONTENT_STYLE:')){result.contentStyle=trimmed.substring('CONTENT_STYLE:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('CTA:')){result.cta=trimmed.substring('CTA:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('TONE:')){result.tone=trimmed.substring('TONE:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('PRICE:')){result.price=trimmed.substring('PRICE:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('COMPETITIVE_ANGLE:')){result.competitiveAngle=trimmed.substring('COMPETITIVE_ANGLE:'.length).trim();inSellingPoints=false;}
     else if(trimmed.startsWith('SELLING_POINTS:')){inSellingPoints=true;}
     else if(inSellingPoints&&trimmed.startsWith('-')){
       if(!result.sellingPoints)result.sellingPoints='';
@@ -574,14 +603,17 @@ async function generateScriptFromProductInfo(){
     const key=getKey();
     if(!key){showError('scriptResult','Enter your Anthropic API key first.');return;}
     
+    const brand=document.getElementById('scriptInfoBrand').value.trim();
     const name=document.getElementById('scriptInfoName').value.trim();
     const category=document.getElementById('scriptInfoCategory').value.trim();
     const features=document.getElementById('scriptInfoFeatures').value.trim();
+    const visibleText=document.getElementById('scriptInfoVisibleText').value.trim();
     const visual=document.getElementById('scriptInfoVisual').value.trim();
     const audience=document.getElementById('scriptInfoAudience').value.trim();
     const style=document.getElementById('scriptInfoStyle').value.trim();
     const cta=document.getElementById('scriptInfoCTA').value.trim();
     const tone=document.getElementById('scriptInfoTone').value.trim();
+    const competitive=document.getElementById('scriptInfoCompetitive').value.trim();
     const language=document.getElementById('scriptInfoLanguage').value;
     
     if(!name){showError('scriptResult','Enter a product name.');return;}
@@ -590,10 +622,14 @@ async function generateScriptFromProductInfo(){
     
     const user=`Generate a TikTok video script for this EXACT product:
 
+BRAND: ${brand||'Not specified'}
 PRODUCT NAME: ${name}
 PRODUCT CATEGORY: ${category}
 KEY SELLING POINTS:
 ${features}
+
+VISIBLE TEXT ON PACKAGING:
+${visibleText||'Not extracted'}
 
 VISUAL DESCRIPTION:
 ${visual}
@@ -602,6 +638,7 @@ TARGET AUDIENCE: ${audience}
 CONTENT STYLE: ${style}
 CALL TO ACTION: ${cta}
 BRAND TONE: ${tone}
+COMPETITIVE ANGLE: ${competitive||'Not specified'}
 LANGUAGE: ${language}
 
 IMPORTANT:
@@ -611,6 +648,8 @@ IMPORTANT:
 - The script should feel like it was written specifically for THIS product, not generic
 - Use Singapore cultural references where appropriate (Singlish, local food culture, hawker culture, etc.)
 - The hook should be attention-grabbing and specific to the product
+- Mention the brand name naturally if it's a recognizable brand
+- Use the competitive angle as a subtle differentiator in the script
 
 Format:
 🎬 VIDEO TITLE
@@ -854,7 +893,7 @@ Output ONLY the prompt paragraph. No headings, no explanations.`;
 };
 
 async function analyzeUgcSubject(inputId){
-  const img=await getImageBase64(inputId);
+  const img=await compressImage(inputId,1024,1024,0.85);
   if(!img)return null;
   const system=`You are a visual content analyst. Look at this image and describe the main subject in 1-2 sentences. Be specific about what is happening, what the person is doing, the setting, and any notable details. This description will be used as a video prompt subject. Keep it under 20 words. Respond with ONLY the description, no extra text.`;
   const result=await callClaude(system,'Describe the main subject and action in this image in one concise sentence.','ugcResult',img.data,img.mediaType,500);
@@ -862,7 +901,7 @@ async function analyzeUgcSubject(inputId){
 }
 
 async function analyzeUgcImage(inputId){
-  const img=await getImageBase64(inputId);
+  const img=await compressImage(inputId,1024,1024,0.85);
   if(!img)return null;
   const system=`You are a video content analyst. Look at the image and identify the best video type. Respond with ONLY the type from this exact list: Product showcase, Lifestyle / Real use, Unboxing / First look, Before & After. If unclear, say "Unknown".`;
   const result=await callClaude(system,'What video type fits this subject best?','ugcResult',img.data,img.mediaType,500);
