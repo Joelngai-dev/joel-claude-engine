@@ -167,7 +167,7 @@
         <div class="wizard-question">📝 Review & Generate</div>
         <div class="wizard-summary" id="scriptSummary"></div>
         <div class="form-group" style="margin-top:16px;">
-          <label>Product Name (required)</label>
+          <label>Product Name (optional)</label>
           <input type="text" id="scriptProdName" placeholder="e.g. Selly's Chili Garlic Sauce">
         </div>
         <div class="form-group">
@@ -598,20 +598,17 @@ const scriptWizard=new AdaptiveWizardEngine({
 scriptWizard.onComplete=async(answers)=>{
   const name=document.getElementById('scriptProdName').value.trim();
   const desc=document.getElementById('scriptProdDesc').value.trim();
-  if(!name){showError('scriptResult','Enter a product name.');return;}
   
   const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs.`;
   
   const user=`Generate a TikTok video script for this product:
-
-PRODUCT: ${name}
-${desc?'DESCRIPTION: '+desc+'\n':''}PRODUCT TYPE: ${answers[0].a}
+${name?'PRODUCT: '+name+'\n':''}${desc?'DESCRIPTION: '+desc+'\n':''}PRODUCT TYPE: ${answers[0].a}
 CONTENT STYLE: ${answers[1].a}
 TARGET AUDIENCE: ${answers[2].a}
 CALL TO ACTION: ${answers[3].a}
 LANGUAGE / TONE: ${answers[4].a}
 
-Format:
+${!name?'Note: The user did not provide a specific product name. Use a generic placeholder like "this product" or "this item" in the script, and let them fill in the actual name later.\n':''}Format:
 🎬 VIDEO TITLE
 📊 STRUCTURE (Hook, Body, CTA with timestamps)
 📝 FULL SCRIPT (with timestamps)
