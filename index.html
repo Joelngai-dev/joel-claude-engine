@@ -337,7 +337,7 @@ async function getImageBase64(inputId) {
 }
 
 // === CLAUDE API (via Vercel proxy) ===
-async function callClaude(system,user,resultId,imageData=null,mediaType='image/jpeg'){
+async function callClaude(system,user,resultId,imageData=null,mediaType='image/jpeg',max_tokens=4096){
   const key=getKey();
   if(!key){showError(resultId,'Enter your Anthropic API key first.');return null;}
   const messages=[{role:'user',content:[]}];
@@ -350,8 +350,8 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
   messages[0].content.push({type:'text',text:user});
   try{
     const controller=new AbortController();
-    const timeoutId=setTimeout(()=>controller.abort(),30000);
-    const res=await fetch('/api/claude',{method:'POST',headers:{'content-type':'application/json','x-api-key':key},body:JSON.stringify({max_tokens:4096,system,messages}),signal:controller.signal});
+    const timeoutId=setTimeout(()=>controller.abort(),60000);
+    const res=await fetch('/api/claude',{method:'POST',headers:{'content-type':'application/json','x-api-key':key},body:JSON.stringify({max_tokens,system,messages}),signal:controller.signal});
     clearTimeout(timeoutId);
     if(!res.ok){const err=await res.text();showError(resultId,`API Error ${res.status}: ${err}`);return null;}
     const data=await res.json();
@@ -685,7 +685,7 @@ ${!name?'Note: The user did not provide a specific product name. Use a generic p
 🎯 SHOOTING NOTES (camera, lighting, props)`;
     const img=await getImageBase64('scriptProdImg');
     // Don't send image on generation - already analyzed at step 1. Sending large base64 causes timeouts.
-    const result=await callClaude(system,user,'scriptResult',null,null);
+    const result=await callClaude(system,user,'scriptResult',null,null,1500);
     if(result){showResult('scriptResult',result);document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});}
   }catch(e){
     console.error('Generate error:',e);
@@ -770,7 +770,7 @@ Requirements:
 Output ONLY the prompt paragraph. No headings, no explanations.`;
     const img=await getImageBase64('ugcRefImg');
     // Don't send image on generation - already analyzed at step 1. Sending large base64 causes timeouts.
-    const result=await callClaude(system,user,'ugcResult',null,null);
+    const result=await callClaude(system,user,'ugcResult',null,null,1500);
     if(result){showResult('ugcResult',result);document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});}
   }catch(e){
     console.error('Generate error:',e);
