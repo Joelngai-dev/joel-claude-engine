@@ -47,18 +47,19 @@
   .key-status.error{color:#ff4444;}
   .hidden{display:none;}
 
-  /* Wizard Styles */
+  /* Wizard / Step Styles */
   .wizard-container{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;}
   .wizard-question{font-size:18px;font-weight:500;margin-bottom:16px;}
   .wizard-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
   .wizard-option{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all 0.15s;}
   .wizard-option:hover{border-color:var(--accent);background:rgba(255,107,53,0.08);}
   .wizard-option.selected{border-color:var(--accent);background:rgba(255,107,53,0.15);}
+  .wizard-option-label{width:32px;height:32px;border-radius:6px;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0;}
+  .wizard-option-label.recommended{background:var(--accent2);color:#000;}
+  .wizard-option-text{font-size:14px;}
   .wizard-option.recommended{border-color:var(--accent2);background:rgba(0,212,170,0.08);position:relative;}
   .wizard-option.recommended::after{content:'★ Recommended';position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--accent2);background:rgba(0,212,170,0.15);padding:2px 8px;border-radius:4px;}
   .wizard-recommended-note{font-size:12px;color:var(--accent2);margin-bottom:10px;font-style:italic;}
-  .wizard-option-label.recommended{background:var(--accent2);color:#000;}
-
   .wizard-custom{display:flex;gap:8px;margin-top:8px;}
   .wizard-custom input{flex:1;}
   .wizard-custom button{white-space:nowrap;}
@@ -79,6 +80,20 @@
   .wizard-detected-value{font-size:14px;}
   .wizard-adaptive-note{font-size:12px;color:var(--accent);margin-bottom:12px;font-style:italic;}
   
+  /* Product Info Card */
+  .product-info-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:20px;margin-top:16px;}
+  .product-info-card img{max-width:200px;border-radius:8px;border:1px solid var(--border);}
+  .product-info-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+  .product-info-field label{font-size:12px;color:var(--accent2);margin-bottom:4px;}
+  .product-info-field input,.product-info-field textarea,.product-info-field select{background:var(--panel);border-color:var(--border);}
+  .product-info-field input:focus,.product-info-field textarea:focus,.product-info-field select:focus{border-color:var(--accent);outline:none;}
+  .product-info-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+  .product-info-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+  .analysis-loading{text-align:center;padding:40px 20px;}
+  .analysis-loading .spinner{font-size:48px;margin-bottom:16px;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%{opacity:0.5;}50%{opacity:1;}100%{opacity:0.5;}}
+  .analysis-status{color:var(--muted);font-size:13px;margin-top:12px;}
+  
   /* Landing */
   .landing-page{text-align:center;padding:40px 20px;max-width:600px;margin:0 auto;}
   .landing-page h1{font-size:36px;margin-bottom:12px;}
@@ -97,7 +112,7 @@
   <p>Adaptive. Dynamic. Built for Singapore.</p>
   <button class="landing-btn" onclick="enterApp()">Enter Engine →</button>
   <div class="features">
-    <div class="feature-card"><h3>🎬 TikTok Script</h3><p>Adaptive wizard that asks the right questions based on your product image.</p></div>
+    <div class="feature-card"><h3>🎬 TikTok Script</h3><p>Upload a product photo. AI analyzes it deeply and generates a script tailored to your exact product.</p></div>
     <div class="feature-card"><h3>🎥 UGC Prompt</h3><p>Image-aware prompt generation for Seedance / Runway.</p></div>
     <div class="feature-card"><h3>✨ Translate</h3><p>English ↔ Singlish ↔ Chinese with local nuance.</p></div>
   </div>
@@ -125,61 +140,120 @@
     <button class="tab" onclick="switchTab('translate')">✨ Translate</button>
   </div>
 
-  <!-- TOOL 1: TIKTOK SCRIPT WIZARD -->
+  <!-- TOOL 1: TIKTOK SCRIPT - NEW PRODUCT ANALYSIS FLOW -->
   <div class="tool-panel active" id="panel-script">
     <h2>🎬 TikTok Script Generator</h2>
-    <p class="desc">Upload a product photo. The AI detects the product type and adapts all questions.</p>
+    <p class="desc">Upload your product photo. Claude will analyze it deeply, extract all product details, and generate a script tailored to your exact product.</p>
     
     <div id="scriptWizard" class="wizard-container">
-      <!-- Image Upload Step -->
+      <!-- Step 1: Image Upload -->
       <div id="scriptImageStep">
         <div class="wizard-progress">
-          <span class="wizard-step-counter">Step 1 of 6</span>
-          <div class="wizard-progress-bar"><div class="wizard-progress-fill" style="width:16%"></div></div>
+          <span class="wizard-step-counter">Step 1 of 3</span>
+          <div class="wizard-progress-bar"><div class="wizard-progress-fill" style="width:33%"></div></div>
         </div>
-        <div class="wizard-question">📸 Upload a product image</div>
-        <p class="desc" style="margin-top:-8px;margin-bottom:12px;">The AI will analyze the image and auto-detect the product type. You can also skip this and answer manually.</p>
+        <div class="wizard-question">📸 Upload your product image</div>
+        <p class="desc" style="margin-top:-8px;margin-bottom:16px;">Claude will analyze the image, identify the product, extract features, and determine the best marketing angles.</p>
         <div class="form-group">
           <input type="file" id="scriptProdImg" accept="image/*" onchange="previewImage('scriptProdImg','scriptProdPreview')">
-          <div id="scriptProdPreview" style="margin-top:8px;max-width:200px;display:none;"><img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;"></div>
+          <div id="scriptProdPreview" style="margin-top:8px;max-width:200px;display:none;">
+            <img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;">
+          </div>
         </div>
         <div class="error" id="scriptImageError" style="display:none;margin-bottom:12px;"></div>
         <div class="wizard-nav">
-          <button class="secondary-btn" onclick="skipScriptImage()">Skip →</button>
-          <button class="generate" onclick="startScriptWizard()">Analyze & Continue →</button>
+          <button class="generate" onclick="analyzeProduct()">🔍 Analyze Product →</button>
         </div>
       </div>
       
-      <!-- Question Step -->
-      <div id="scriptQuestionBox" class="wizard-hidden">
+      <!-- Step 2: Analyzing -->
+      <div id="scriptAnalysisStep" class="wizard-hidden">
         <div class="wizard-progress">
-          <span class="wizard-step-counter" id="scriptStepCounter">Step 2 of 6</span>
-          <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="scriptProgress" style="width:33%"></div></div>
+          <span class="wizard-step-counter">Step 2 of 3</span>
+          <div class="wizard-progress-bar"><div class="wizard-progress-fill" style="width:66%"></div></div>
         </div>
-        <div class="wizard-detected" id="scriptDetected"><div class="wizard-detected-label">✅ Detected from image</div><div class="wizard-detected-value" id="scriptDetectedValue"></div></div>
-        <div class="wizard-adaptive-note" id="scriptAdaptiveNote"></div>
-        <div class="wizard-question" id="scriptQuestion"></div>
-        <div class="wizard-options" id="scriptOptions"></div>
-        <div class="wizard-nav" id="scriptNav">
-          <button class="secondary-btn" id="scriptBack" onclick="scriptWizard.back()" style="display:none;">← Back</button>
+        <div class="analysis-loading">
+          <div class="spinner">🔍</div>
+          <div class="wizard-question">Analyzing your product...</div>
+          <p class="desc" style="margin-top:8px;">Claude is extracting product details, features, and marketing angles from your image.</p>
+          <div class="analysis-status" id="scriptAnalysisStatus">Uploading image...</div>
         </div>
       </div>
       
-      <!-- Summary Step -->
-      <div id="scriptSummaryBox" class="wizard-hidden">
-        <div class="wizard-question">📝 Review & Generate</div>
-        <div class="wizard-summary" id="scriptSummary"></div>
-        <div class="form-group" style="margin-top:16px;">
-          <label>Product Name (optional)</label>
-          <input type="text" id="scriptProdName" placeholder="e.g. Selly's Chili Garlic Sauce">
+      <!-- Step 3: Product Info Review -->
+      <div id="scriptProductInfo" class="wizard-hidden">
+        <div class="wizard-progress">
+          <span class="wizard-step-counter">Step 3 of 3</span>
+          <div class="wizard-progress-bar"><div class="wizard-progress-fill" style="width:100%"></div></div>
         </div>
-        <div class="form-group">
-          <label>Product Description (optional)</label>
-          <input type="text" id="scriptProdDesc" placeholder="Premium sauce, $12.90, target busy parents...">
-        </div>
-        <div class="wizard-nav">
-          <button class="secondary-btn" onclick="scriptWizard.restart()">↺ Restart</button>
-          <button class="generate" onclick="scriptWizard.generate()">🎬 Generate Script</button>
+        <div class="wizard-question">📝 Review Product Details</div>
+        <p class="desc" style="margin-top:-8px;margin-bottom:16px;">Claude extracted these details from your image. Review and edit as needed — the more accurate, the better the script.</p>
+        
+        <div class="product-info-card">
+          <div class="product-info-header">
+            <div id="scriptInfoImage"></div>
+            <div>
+              <div style="font-size:12px;color:var(--accent2);margin-bottom:4px;">✅ AI Detected from Image</div>
+              <div id="scriptInfoDetectedCategory" style="font-size:14px;"></div>
+            </div>
+          </div>
+          
+          <div class="product-info-grid">
+            <div class="product-info-field">
+              <label>Product Name</label>
+              <input type="text" id="scriptInfoName" placeholder="e.g. Selly's Chili Garlic Sauce">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Product Category</label>
+              <input type="text" id="scriptInfoCategory" placeholder="e.g. Food & Beverage">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Key Selling Points (one per line)</label>
+              <textarea id="scriptInfoFeatures" placeholder="• Premium quality ingredients&#10;• Authentic Singapore recipe&#10;• No preservatives added" style="min-height:80px;"></textarea>
+            </div>
+            
+            <div class="product-info-field">
+              <label>Visual Description</label>
+              <input type="text" id="scriptInfoVisual" placeholder="e.g. Glass bottle with red label, golden sauce visible">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Target Audience</label>
+              <input type="text" id="scriptInfoAudience" placeholder="e.g. Busy parents who love cooking at home">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Recommended Content Style</label>
+              <input type="text" id="scriptInfoStyle" placeholder="e.g. Recipe / Cooking Demo">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Call to Action</label>
+              <input type="text" id="scriptInfoCTA" placeholder="e.g. Shop now via link in bio">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Brand Tone</label>
+              <input type="text" id="scriptInfoTone" placeholder="e.g. Warm, authentic, premium">
+            </div>
+            
+            <div class="product-info-field">
+              <label>Language / Tone</label>
+              <select id="scriptInfoLanguage">
+                <option value="English">English (professional)</option>
+                <option value="Singlish">Singlish (relatable, casual)</option>
+                <option value="Chinese">Chinese (Mandarin)</option>
+                <option value="Mixed">Mixed (English + Singlish)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="wizard-nav" style="margin-top:24px;">
+            <button class="secondary-btn" onclick="restartScript()">↺ Start Over</button>
+            <button class="generate" onclick="generateScriptFromProductInfo()">🎬 Generate Script</button>
+          </div>
         </div>
       </div>
     </div>
@@ -206,7 +280,9 @@
         <p class="desc" style="margin-top:-8px;margin-bottom:12px;">The AI will analyze the image and auto-detect the video type. You can also skip this and answer manually.</p>
         <div class="form-group">
           <input type="file" id="ugcRefImg" accept="image/*" onchange="previewImage('ugcRefImg','ugcRefPreview')">
-          <div id="ugcRefPreview" style="margin-top:8px;max-width:200px;display:none;"><img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;"></div>
+          <div id="ugcRefPreview" style="margin-top:8px;max-width:200px;display:none;">
+            <img style="width:100%;border-radius:8px;border:1px solid #2a2a2a;">
+          </div>
         </div>
         <div class="error" id="ugcImageError" style="display:none;margin-bottom:12px;"></div>
         <div class="wizard-nav">
@@ -337,7 +413,7 @@ async function getImageBase64(inputId) {
 }
 
 // === CLAUDE API (via Vercel proxy) ===
-async function callClaude(system,user,resultId,imageData=null,mediaType='image/jpeg',max_tokens=4096){
+async function callClaude(system,user,resultId,imageData=null,mediaType='image/jpeg',max_tokens=1500){
   const key=getKey();
   if(!key){showError(resultId,'Enter your Anthropic API key first.');return null;}
   const messages=[{role:'user',content:[]}];
@@ -364,36 +440,196 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
   }
 }
 
-// === IMAGE ANALYSIS ===
-async function analyzeProductImage(inputId){
-  const img=await getImageBase64(inputId);
-  if(!img)return null;
-  const system=`You are a product analyst. Look at the image and identify the product category. Respond with ONLY the category name from this exact list: Food & Beverage, Beauty & Health, Tech & Gadgets, Home & Lifestyle. If unclear, say "Unknown". One word only.`;
-  const result=await callClaude(system,'What product category is this?','scriptResult',img.data,img.mediaType);
-  if(!result)return null;
-  const normalized=result.toLowerCase().trim();
-  if(normalized.includes('food')||normalized.includes('beverage'))return'Food & Beverage';
-  if(normalized.includes('beauty')||normalized.includes('health')||normalized.includes('personal'))return'Beauty & Health';
-  if(normalized.includes('tech')||normalized.includes('gadget'))return'Tech & Gadgets';
-  if(normalized.includes('home')||normalized.includes('lifestyle'))return'Home & Lifestyle';
-  return null;
+// === TIKTOK SCRIPT - NEW PRODUCT ANALYSIS FLOW ===
+
+async function analyzeProduct(){
+  const btn=document.querySelector('#scriptImageStep .generate');
+  const imgFile=document.getElementById('scriptProdImg').files[0];
+  const errorEl=document.getElementById('scriptImageError');
+  
+  errorEl.style.display='none';errorEl.textContent='';
+  
+  if(!imgFile){errorEl.textContent='Please upload a product image first.';errorEl.style.display='block';return;}
+  
+  btn.textContent='Analyzing...';btn.disabled=true;
+  document.getElementById('scriptImageStep').className='wizard-hidden';
+  document.getElementById('scriptAnalysisStep').className='wizard-visible';
+  document.getElementById('scriptAnalysisStatus').textContent='Uploading and compressing image...';
+  
+  const img=await getImageBase64('scriptProdImg');
+  if(!img){
+    document.getElementById('scriptImageStep').className='wizard-visible';
+    document.getElementById('scriptAnalysisStep').className='wizard-hidden';
+    btn.textContent='🔍 Analyze Product →';btn.disabled=false;
+    errorEl.textContent='Failed to process image. Try a smaller image.';errorEl.style.display='block';
+    return;
+  }
+  
+  document.getElementById('scriptAnalysisStatus').textContent='Claude is analyzing your product...';
+  
+  const system=`You are an expert product analyst and TikTok marketing strategist based in Singapore. Look at the product image and extract detailed information that will be used to create a high-converting TikTok script.
+
+Extract the following information:
+1. Product Name - What is this product called? (If not visible, make a reasonable guess based on appearance)
+2. Product Category - What category? (Food & Beverage, Beauty & Health, Tech & Gadgets, Home & Lifestyle, Fashion, etc.)
+3. Key Selling Points - 3-5 specific selling points visible from the image (ingredients, features, benefits, packaging quality, etc.)
+4. Visual Description - Describe what the product looks like, packaging, colors, size, texture, anything notable
+5. Target Audience - Who would buy this? Be specific (e.g., "busy parents who cook at home", "young professionals into skincare")
+6. Recommended Content Style - Best TikTok format for this product (e.g., "Recipe / Cooking Demo", "Product Review / Demo", "Unboxing / First Look")
+7. Recommended CTA - Best call-to-action (e.g., "Shop now link in bio", "Comment if you want the recipe")
+8. Brand Tone - What tone fits this product? (premium, affordable, fun, serious, warm, edgy, etc.)
+9. Estimated Price Point - If visible or inferable from packaging/brand
+
+Respond ONLY in this exact format:
+PRODUCT_NAME: [name]
+CATEGORY: [category]
+SELLING_POINTS:
+- [point 1]
+- [point 2]
+- [point 3]
+VISUAL: [description]
+AUDIENCE: [audience]
+CONTENT_STYLE: [style]
+CTA: [cta]
+TONE: [tone]
+PRICE: [price or "Not visible"]`;
+  
+  const result=await callClaude(system,'Analyze this product image in detail.','scriptResult',img.data,img.mediaType,2000);
+  
+  if(!result){
+    document.getElementById('scriptImageStep').className='wizard-visible';
+    document.getElementById('scriptAnalysisStep').className='wizard-hidden';
+    btn.textContent='🔍 Analyze Product →';btn.disabled=false;
+    return;
+  }
+  
+  const productInfo=parseProductAnalysis(result);
+  
+  // Populate product info page
+  document.getElementById('scriptInfoName').value=productInfo.name||'';
+  document.getElementById('scriptInfoCategory').value=productInfo.category||'';
+  document.getElementById('scriptInfoFeatures').value=productInfo.sellingPoints||'';
+  document.getElementById('scriptInfoVisual').value=productInfo.visual||'';
+  document.getElementById('scriptInfoAudience').value=productInfo.audience||'';
+  document.getElementById('scriptInfoStyle').value=productInfo.contentStyle||'';
+  document.getElementById('scriptInfoCTA').value=productInfo.cta||'';
+  document.getElementById('scriptInfoTone').value=productInfo.tone||'';
+  document.getElementById('scriptInfoDetectedCategory').textContent=productInfo.category||'Product detected';
+  
+  // Show product image in review page
+  const previewImg=document.querySelector('#scriptProdPreview img');
+  const infoImageDiv=document.getElementById('scriptInfoImage');
+  if(previewImg&&previewImg.src){
+    infoImageDiv.innerHTML=`<img src="${previewImg.src}" style="max-width:200px;border-radius:8px;border:1px solid var(--border);">`;
+  }
+  
+  document.getElementById('scriptAnalysisStep').className='wizard-hidden';
+  document.getElementById('scriptProductInfo').className='wizard-visible';
+  
+  btn.textContent='🔍 Analyze Product →';btn.disabled=false;
 }
 
-async function analyzeUgcImage(inputId){
-  const img=await getImageBase64(inputId);
-  if(!img)return null;
-  const system=`You are a video content analyst. Look at the image and identify the best video type. Respond with ONLY the type from this exact list: Product showcase, Lifestyle / Real use, Unboxing / First look, Before & After. If unclear, say "Unknown".`;
-  const result=await callClaude(system,'What video type fits this subject best?','ugcResult',img.data,img.mediaType);
-  if(!result)return null;
-  const normalized=result.toLowerCase().trim();
-  if(normalized.includes('product')||normalized.includes('showcase'))return'Product showcase';
-  if(normalized.includes('lifestyle')||normalized.includes('real'))return'Lifestyle / Real use';
-  if(normalized.includes('unbox')||normalized.includes('first'))return'Unboxing / First look';
-  if(normalized.includes('before')||normalized.includes('after'))return'Before & After';
-  return null;
+function parseProductAnalysis(text){
+  const result={};
+  const lines=text.split('\n');
+  let inSellingPoints=false;
+  
+  for(const line of lines){
+    const trimmed=line.trim();
+    if(!trimmed)continue;
+    
+    if(trimmed.startsWith('PRODUCT_NAME:')){result.name=trimmed.substring('PRODUCT_NAME:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('CATEGORY:')){result.category=trimmed.substring('CATEGORY:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('VISUAL:')){result.visual=trimmed.substring('VISUAL:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('AUDIENCE:')){result.audience=trimmed.substring('AUDIENCE:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('CONTENT_STYLE:')){result.contentStyle=trimmed.substring('CONTENT_STYLE:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('CTA:')){result.cta=trimmed.substring('CTA:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('TONE:')){result.tone=trimmed.substring('TONE:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('PRICE:')){result.price=trimmed.substring('PRICE:'.length).trim();inSellingPoints=false;}
+    else if(trimmed.startsWith('SELLING_POINTS:')){inSellingPoints=true;}
+    else if(inSellingPoints&&trimmed.startsWith('-')){
+      if(!result.sellingPoints)result.sellingPoints='';
+      result.sellingPoints+=trimmed.substring(1).trim()+'\n';
+    }
+  }
+  
+  return result;
 }
 
-// === ADAPTIVE WIZARD ENGINE ===
+function restartScript(){
+  document.getElementById('scriptProductInfo').className='wizard-hidden';
+  document.getElementById('scriptImageStep').className='wizard-visible';
+  document.getElementById('scriptProdImg').value='';
+  document.getElementById('scriptProdPreview').style.display='none';
+  document.getElementById('scriptResult').classList.remove('visible');
+}
+
+async function generateScriptFromProductInfo(){
+  const btn=document.querySelector('#scriptProductInfo .generate');
+  const originalText=btn.textContent;
+  
+  try{
+    btn.textContent='🔄 Generating...';btn.disabled=true;
+    
+    const key=getKey();
+    if(!key){showError('scriptResult','Enter your Anthropic API key first.');return;}
+    
+    const name=document.getElementById('scriptInfoName').value.trim();
+    const category=document.getElementById('scriptInfoCategory').value.trim();
+    const features=document.getElementById('scriptInfoFeatures').value.trim();
+    const visual=document.getElementById('scriptInfoVisual').value.trim();
+    const audience=document.getElementById('scriptInfoAudience').value.trim();
+    const style=document.getElementById('scriptInfoStyle').value.trim();
+    const cta=document.getElementById('scriptInfoCTA').value.trim();
+    const tone=document.getElementById('scriptInfoTone').value.trim();
+    const language=document.getElementById('scriptInfoLanguage').value;
+    
+    if(!name){showError('scriptResult','Enter a product name.');return;}
+    
+    const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs. You are an expert at creating scripts that feel authentic and specific to the exact product being promoted.`;
+    
+    const user=`Generate a TikTok video script for this EXACT product:
+
+PRODUCT NAME: ${name}
+PRODUCT CATEGORY: ${category}
+KEY SELLING POINTS:
+${features}
+
+VISUAL DESCRIPTION:
+${visual}
+
+TARGET AUDIENCE: ${audience}
+CONTENT STYLE: ${style}
+CALL TO ACTION: ${cta}
+BRAND TONE: ${tone}
+LANGUAGE: ${language}
+
+IMPORTANT:
+- Use the EXACT product name "${name}" throughout the script
+- Reference the specific visual details from the visual description in the shooting notes
+- Make the selling points feel natural and authentic, not salesy
+- The script should feel like it was written specifically for THIS product, not generic
+- Use Singapore cultural references where appropriate (Singlish, local food culture, hawker culture, etc.)
+- The hook should be attention-grabbing and specific to the product
+
+Format:
+🎬 VIDEO TITLE
+📊 STRUCTURE (Hook, Body, CTA with timestamps)
+📝 FULL SCRIPT (with timestamps - each line should have [0-3s], [3-8s], [8-12s], etc.)
+📱 CAPTION (with hashtags for Singapore - include #Singapore, #TikTokSG, #SGTikTok, and category-specific tags)
+🎯 SHOOTING NOTES (camera angles, lighting, props, specific shots based on the visual description)`;
+
+    const result=await callClaude(system,user,'scriptResult',null,null,2000);
+    if(result){showResult('scriptResult',result);}
+  }catch(e){
+    console.error('Generate error:',e);
+    showError('scriptResult','Failed to generate: '+e.message);
+  }finally{
+    btn.textContent=originalText;btn.disabled=false;
+  }
+}
+
+// === UGC PROMPT WIZARD (Adaptive) ===
 class AdaptiveWizardEngine{
   constructor(config){
     this.questions=config.questions;
@@ -404,7 +640,6 @@ class AdaptiveWizardEngine{
     this.key=config.key;
     this.prefilledCount=0;
     this.detectedValue='';
-    this.adaptiveNotes=config.adaptiveNotes||{};
   }
   start(prefilled=[],detectedValue=''){
     this.answers=[...prefilled];
@@ -418,55 +653,50 @@ class AdaptiveWizardEngine{
   
   getCurrentQuestion(){
     const q=this.questions[this.current];
-    // If question has dynamic options, generate them
-    if(q.getOptions){
-      return {...q, options: q.getOptions(this.answers)};
-    }
+    if(q.getOptions){return {...q, options: q.getOptions(this.answers)};}
     return q;
   }
   
   getAdaptiveNote(){
     const q=this.questions[this.current];
-    if(q.adaptiveNote){
-      return q.adaptiveNote(this.answers);
-    }
+    if(q.adaptiveNote){return q.adaptiveNote(this.answers);}
     return '';
+  }
+  
+  getRecommendedIndex(){
+    const q=this.questions[this.current];
+    if(q.getRecommended){return q.getRecommended(this.answers);}
+    return -1;
   }
   
   render(){
     const q=this.getCurrentQuestion();
     const total=this.questions.length;
     const currentStep=this.current+1;
-    const totalSteps=total+1; // +1 for image step
+    const totalSteps=total+1;
     
     document.getElementById(this.key+'Question').textContent=q.question;
     document.getElementById(this.key+'StepCounter').textContent=`Step ${currentStep+1} of ${totalSteps}`;
     document.getElementById(this.key+'Progress').style.width=`${((currentStep)/totalSteps)*100}%`;
     
-    // Show/hide back button
     const backBtn=document.getElementById(this.key+'Back');
     backBtn.style.display=this.current>0?'block':'none';
     
-    // Adaptive note
     const noteEl=document.getElementById(this.key+'AdaptiveNote');
     const note=this.getAdaptiveNote();
     if(note){noteEl.textContent='💡 '+note;noteEl.style.display='block';}
     else{noteEl.style.display='none';}
     
-    // Render options A/B/C/D/E
+    const recIdx=this.getRecommendedIndex();
+    
     const opts=document.getElementById(this.key+'Options');
     opts.innerHTML='';
     
-    // Check for recommended option
-    let recIdx=-1;
-    if(q.getRecommended){
-      recIdx=q.getRecommended(this.answers);
-      if(recIdx>=0){
-        const recNote=document.createElement('div');
-        recNote.className='wizard-recommended-note';
-        recNote.textContent='★ Best choice for your product';
-        opts.appendChild(recNote);
-      }
+    if(recIdx>=0){
+      const recNote=document.createElement('div');
+      recNote.className='wizard-recommended-note';
+      recNote.textContent='★ Best choice for your product';
+      opts.appendChild(recNote);
     }
     
     q.options.forEach((opt,i)=>{
@@ -477,7 +707,6 @@ class AdaptiveWizardEngine{
       opts.appendChild(btn);
     });
     
-    // Custom option (E)
     const customDiv=document.createElement('div');
     customDiv.className='wizard-custom';
     const customInput=document.createElement('input');
@@ -520,81 +749,6 @@ class AdaptiveWizardEngine{
   generate(){if(this.onComplete)this.onComplete(this.answers);}
 }
 
-// === ADAPTIVE QUESTION DEFINITIONS ===
-const scriptQuestions=[
-  {
-    question:'What type of product are you promoting?',
-    options:['Food & Beverage','Beauty & Health','Tech & Gadgets','Home & Lifestyle'],
-    adaptiveNote:(answers)=>'Choose the category that best matches your product'
-  },
-  {
-    question:'What content style do you want?',
-    getOptions:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return ['Recipe / Cooking Demo','Mukbang / Taste Test','Food Hack / Trending','ASMR / Satisfying'];
-      if(type==='Beauty & Health') return ['Product Review / Demo','Tutorial / How-to','Transformation / Results','Unboxing / First Look'];
-      if(type==='Tech & Gadgets') return ['Review / Comparison','Unboxing / First Look','Tutorial / How-to','Tech Hack / Hidden Feature'];
-      return ['Product Review / Demo','Storytelling / Drama','Trending / Challenge','Educational / How-to'];
-    },
-    getRecommended:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return 0;
-      if(type==='Beauty & Health') return 0;
-      if(type==='Tech & Gadgets') return 0;
-      return 0;
-    },
-    adaptiveNote:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return 'Recipe / Cooking Demo performs best for food products';
-      if(type==='Beauty & Health') return 'Product Review / Demo converts best for beauty';
-      if(type==='Tech & Gadgets') return 'Review / Comparison builds trust for tech';
-      return 'Product Review / Demo is the safest choice';
-    }
-  },
-  {
-    question:'Who is your target audience?',
-    getOptions:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return ['Foodies / Home Cooks','Busy Parents','Health Conscious','Late Night Snackers'];
-      if(type==='Beauty & Health') return ['Skincare Enthusiasts','Fitness / Gym Goers','Busy Professionals','Self-Care Seekers'];
-      if(type==='Tech & Gadgets') return ['Tech Enthusiasts','Students / Budget Buyers','Professionals / Productivity','Gamers'];
-      return ['Gen Z (18-25)','Millennials (26-40)','Parents / Families','PHV Drivers / Workers'];
-    },
-    getRecommended:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return 0;
-      if(type==='Beauty & Health') return 0;
-      if(type==='Tech & Gadgets') return 0;
-      return 2;
-    },
-    adaptiveNote:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return 'Foodies are the most engaged audience for food content';
-      if(type==='Beauty & Health') return 'Skincare enthusiasts actively search for beauty tips';
-      if(type==='Tech & Gadgets') return 'Tech enthusiasts are early adopters and drive shares';
-      return 'Parents / Families have high purchasing power';
-    }
-  },
-  {
-    question:'What call-to-action do you want?',
-    options:['Shop now / Buy link','Follow for more tips','Comment your experience','Share with a friend'],
-    getRecommended:()=>0,
-    adaptiveNote:(answers)=>{
-      const type=answers[0]?.a;
-      if(type==='Food & Beverage') return 'Shop now drives immediate purchases for food';
-      if(type==='Beauty & Health') return 'Shop now converts best for impulse beauty buys';
-      if(type==='Tech & Gadgets') return 'Shop now works for tech with clear value prop';
-      return 'Shop now is the best for direct sales';
-    }
-  },
-  {
-    question:'What language / tone?',
-    options:['English (professional)','Singlish (relatable, casual)','Chinese (Mandarin)','Mixed (English + Singlish)'],
-    getRecommended:()=>3,
-    adaptiveNote:()=>'Mixed (English + Singlish) resonates most with Singapore audiences'
-  }
-];
-
 const ugcQuestions=[
   {
     question:'What type of video do you want?',
@@ -612,10 +766,10 @@ const ugcQuestions=[
     },
     getRecommended:(answers)=>{
       const type=answers[0]?.a;
-      if(type==='Product showcase') return 0; // Close-up / Macro detail
-      if(type==='Lifestyle / Real use') return 0; // Candid / Documentary
-      if(type==='Unboxing / First look') return 0; // Top-down unboxing
-      return 0; // Split screen comparison
+      if(type==='Product showcase') return 0;
+      if(type==='Lifestyle / Real use') return 0;
+      if(type==='Unboxing / First look') return 0;
+      return 0;
     },
     adaptiveNote:(answers)=>{
       const type=answers[0]?.a;
@@ -628,106 +782,23 @@ const ugcQuestions=[
   {
     question:'What lighting mood?',
     options:['Bright / Natural daylight','Warm / Cozy indoor','Dramatic / High contrast','Clean / Studio white'],
-    getRecommended:()=>0, // Bright / Natural daylight is safest
+    getRecommended:()=>0,
     adaptiveNote:()=>'Bright natural daylight works for almost all content types'
   },
   {
     question:'What motion / camera movement?',
     options:['Static / Stable tripod','Slow pan / Gentle movement','Handheld / Slightly shaky','Dynamic / Fast cuts'],
-    getRecommended:()=>1, // Slow pan / Gentle movement is best for UGC
+    getRecommended:()=>1,
     adaptiveNote:()=>'Slow pan feels premium while keeping that authentic UGC vibe'
   },
   {
     question:'What duration?',
     options:['5 seconds (Super short hook)','15 seconds (Quick impact)','30 seconds (Standard UGC)','60 seconds (Full story)'],
-    getRecommended:()=>2, // 30 seconds is the sweet spot
+    getRecommended:()=>2,
     adaptiveNote:()=>'30 seconds is the standard UGC length with best retention'
   }
 ];
 
-// === SCRIPT WIZARD SETUP ===
-const scriptWizard=new AdaptiveWizardEngine({
-  key:'script',
-  questions:scriptQuestions,
-  onRestart:()=>{
-    document.getElementById('scriptImageStep').className='wizard-visible';
-    document.getElementById('scriptQuestionBox').className='wizard-hidden';
-    document.getElementById('scriptSummaryBox').className='wizard-hidden';
-    document.getElementById('scriptDetected').className='wizard-detected';
-    document.getElementById('scriptProdName').value='';
-    document.getElementById('scriptProdDesc').value='';
-    document.getElementById('scriptProdImg').value='';
-    document.getElementById('scriptProdPreview').style.display='none';
-  }
-});
-
-scriptWizard.onComplete=async(answers)=>{
-  const btn=document.querySelector('#scriptSummaryBox .generate');
-  const originalText=btn.textContent;
-  try{
-    btn.textContent='🔄 Generating...';btn.disabled=true;
-    const name=document.getElementById('scriptProdName').value.trim();
-    const desc=document.getElementById('scriptProdDesc').value.trim();
-    const key=getKey();
-    if(!key){showError('scriptResult','Enter your Anthropic API key first.');document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});return;}
-    const system=`You are an expert TikTok content strategist based in Singapore. You create high-converting TikTok scripts optimized for the Singapore market. You understand Singlish, local culture, food, and shopping behavior. You write scripts with strong hooks, clear structure, and effective CTAs.`;
-    const user=`Generate a TikTok video script for this product:
-${name?'PRODUCT: '+name+'\n':''}${desc?'DESCRIPTION: '+desc+'\n':''}PRODUCT TYPE: ${answers[0].a}
-CONTENT STYLE: ${answers[1].a}
-TARGET AUDIENCE: ${answers[2].a}
-CALL TO ACTION: ${answers[3].a}
-LANGUAGE / TONE: ${answers[4].a}
-${!name?'Note: The user did not provide a specific product name. Use a generic placeholder like "this product" or "this item" in the script, and let them fill in the actual name later.\n':''}Format:
-🎬 VIDEO TITLE
-📊 STRUCTURE (Hook, Body, CTA with timestamps)
-📝 FULL SCRIPT (with timestamps)
-📱 CAPTION (with hashtags for Singapore)
-🎯 SHOOTING NOTES (camera, lighting, props)`;
-    const img=await getImageBase64('scriptProdImg');
-    // Don't send image on generation - already analyzed at step 1. Sending large base64 causes timeouts.
-    const result=await callClaude(system,user,'scriptResult',null,null,1500);
-    if(result){showResult('scriptResult',result);document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});}
-  }catch(e){
-    console.error('Generate error:',e);
-    showError('scriptResult','Failed to generate: '+e.message);
-    document.getElementById('scriptResult').scrollIntoView({behavior:'smooth'});
-  }finally{
-    btn.textContent=originalText;btn.disabled=false;
-  }
-};
-
-async function startScriptWizard(){
-  const btn=document.querySelector('#scriptImageStep .generate');
-  const originalText=btn.textContent;
-  const imgFile=document.getElementById('scriptProdImg').files[0];
-  let prefilled=[];let detectedValue='';
-  
-  btn.textContent='Analyzing image...';btn.disabled=true;
-  
-  if(imgFile){
-    try{
-      detectedValue=await analyzeProductImage('scriptProdImg');
-      if(detectedValue){
-        prefilled=[{q:scriptQuestions[0].question,a:detectedValue,idx:scriptQuestions[0].options.indexOf(detectedValue)}];
-        document.getElementById('scriptDetectedValue').textContent=detectedValue;
-        document.getElementById('scriptDetected').className='wizard-detected visible';
-      }
-    }catch(e){console.error('Image analysis error:',e);}
-  }
-  
-  btn.textContent=originalText;btn.disabled=false;
-  document.getElementById('scriptImageStep').className='wizard-hidden';
-  document.getElementById('scriptQuestionBox').className='wizard-visible';
-  scriptWizard.start(prefilled,detectedValue);
-}
-
-function skipScriptImage(){
-  document.getElementById('scriptImageStep').className='wizard-hidden';
-  document.getElementById('scriptQuestionBox').className='wizard-visible';
-  scriptWizard.start([],'');
-}
-
-// === UGC WIZARD SETUP ===
 const ugcWizard=new AdaptiveWizardEngine({
   key:'ugc',
   questions:ugcQuestions,
@@ -748,9 +819,9 @@ ugcWizard.onComplete=async(answers)=>{
   try{
     btn.textContent='🔄 Generating...';btn.disabled=true;
     const subject=document.getElementById('ugcSubject').value.trim();
-    if(!subject){showError('ugcResult','Enter a product / subject description.');document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});return;}
+    if(!subject){showError('ugcResult','Enter a product / subject description.');return;}
     const key=getKey();
-    if(!key){showError('ugcResult','Enter your Anthropic API key first.');document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});return;}
+    if(!key){showError('ugcResult','Enter your Anthropic API key first.');return;}
     const durMap={'5 seconds (Super short hook)':'5','15 seconds (Quick impact)':'15','30 seconds (Standard UGC)':'30','60 seconds (Full story)':'60'};
     const duration=durMap[answers[4].a]||'30';
     const system=`You are an expert AI video prompt engineer specializing in UGC (user-generated content) style prompts for AI video generators like Seedance, Runway, and similar tools. You create cinematic, detailed prompts that result in authentic, high-converting video content.`;
@@ -768,18 +839,29 @@ Requirements:
 - Emotional tone
 - End with a natural CTA moment
 Output ONLY the prompt paragraph. No headings, no explanations.`;
-    const img=await getImageBase64('ugcRefImg');
-    // Don't send image on generation - already analyzed at step 1. Sending large base64 causes timeouts.
     const result=await callClaude(system,user,'ugcResult',null,null,1500);
-    if(result){showResult('ugcResult',result);document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});}
+    if(result){showResult('ugcResult',result);}
   }catch(e){
     console.error('Generate error:',e);
     showError('ugcResult','Failed to generate: '+e.message);
-    document.getElementById('ugcResult').scrollIntoView({behavior:'smooth'});
   }finally{
     btn.textContent=originalText;btn.disabled=false;
   }
 };
+
+async function analyzeUgcImage(inputId){
+  const img=await getImageBase64(inputId);
+  if(!img)return null;
+  const system=`You are a video content analyst. Look at the image and identify the best video type. Respond with ONLY the type from this exact list: Product showcase, Lifestyle / Real use, Unboxing / First look, Before & After. If unclear, say "Unknown".`;
+  const result=await callClaude(system,'What video type fits this subject best?','ugcResult',img.data,img.mediaType,500);
+  if(!result)return null;
+  const normalized=result.toLowerCase().trim();
+  if(normalized.includes('product')||normalized.includes('showcase'))return'Product showcase';
+  if(normalized.includes('lifestyle')||normalized.includes('real'))return'Lifestyle / Real use';
+  if(normalized.includes('unbox')||normalized.includes('first'))return'Unboxing / First look';
+  if(normalized.includes('before')||normalized.includes('after'))return'Before & After';
+  return null;
+}
 
 async function startUgcWizard(){
   const btn=document.querySelector('#ugcImageStep .generate');
@@ -822,7 +904,7 @@ async function translateContent(){
   const langNames={en:'English',sg:'Singlish (Singapore Colloquial English)',cn:'Chinese (Mandarin)'};
   const system=`You are a Singapore content localization expert. You translate and adapt content between English, Singlish, and Chinese. You understand Singapore culture, food names, local expressions, and shopping behavior.`;
   const user=`Translate from ${langNames[from]} to ${langNames[to]}. Maintain the original meaning but adapt tone, style, and cultural references for the target language. Only return the translated text, no explanations.\n\n---\n${input}\n---`;
-  const result=await callClaude(system,user,'transResult');
+  const result=await callClaude(system,user,'transResult',null,null,1500);
   if(result)showResult('transResult',result);
 }
 
