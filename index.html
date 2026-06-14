@@ -264,7 +264,7 @@ function showResult(id,text){const el=document.getElementById(id);el.querySelect
 function showError(id,msg){const el=document.getElementById(id);el.querySelector('pre').textContent='Error: '+msg;el.classList.add('visible');}
 function copyResult(id){const text=document.getElementById(id).querySelector('pre').textContent;navigator.clipboard.writeText(text).then(()=>alert('Copied!'));}
 function previewImage(inputId,previewId){const file=document.getElementById(inputId).files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const img=document.getElementById(previewId).querySelector('img');img.src=e.target.result;document.getElementById(previewId).style.display='block';};reader.readAsDataURL(file);}
-async function compressImage(inputId, maxWidth = 1024, maxHeight = 1024, quality = 0.8) {
+async function compressImage(inputId, maxWidth = 512, maxHeight = 512, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const file = document.getElementById(inputId).files[0];
     if (!file) return resolve(null);
@@ -281,7 +281,12 @@ async function compressImage(inputId, maxWidth = 1024, maxHeight = 1024, quality
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      let dataUrl = canvas.toDataURL('image/jpeg', quality);
+      // Ensure base64 is under ~4.5MB (Claude limit is 5MB)
+      while (dataUrl.length > 4.5 * 1024 * 1024 * 1.33 && quality > 0.3) {
+        quality -= 0.1;
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+      }
       resolve({ data: dataUrl, mediaType: 'image/jpeg' });
     };
     img.onerror = () => reject(new Error('Failed to load image for compression'));
@@ -292,21 +297,7 @@ async function compressImage(inputId, maxWidth = 1024, maxHeight = 1024, quality
 }
 
 async function getImageBase64(inputId) {
-  const file = document.getElementById(inputId).files[0];
-  if (!file) return null;
-  // If file is under 4MB, use original. Otherwise compress.
-  if (file.size < 4 * 1024 * 1024) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target.result;
-        const mediaType = result.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
-        resolve({ data: result, mediaType });
-      };
-      reader.onerror = () => reject(new Error('Failed to read image'));
-      reader.readAsDataURL(file);
-    });
-  }
+  // Always compress to ensure we're under 5MB base64 limit
   return compressImage(inputId);
 }
 
