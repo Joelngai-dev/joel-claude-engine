@@ -313,21 +313,38 @@ async function callClaude(system,user,resultId,imageData=null,mediaType='image/j
   const key=getKey();
   if(!key){showError(resultId,'Enter your Anthropic API key first.');return null;}
   const messages=[{role:'user',content:[]}];
+  let base64Data=null;
   if(imageData){
-    const base64Data=imageData.split(',')[1];
+    base64Data=imageData.split(',')[1];
     console.log('[Claude API] Base64 data length:',base64Data?.length||0,'(~',((base64Data?.length||0)/1024/1024).toFixed(2),'MB)');
-    if(!base64Data||base64Data.length<100){console.error('[Claude API] Invalid base64 data');showError(resultId,'Image processing failed. Try a different image.');return null;}
-    messages[0].content.push({type:'image',source:{type:'base64',media_type:mediaType,data:base64Data}});
+    if(!base64Data||base64Data.length<100){console.error('[Claude API] Invalid base64 data');}
+    else{messages[0].content.push({type:'image',source:{type:'base64',media_type:mediaType,data:base64Data}});}
   }
   messages[0].content.push({type:'text',text:user});
-  console.log('[Claude API] Calling with model: claude-3-5-sonnet-20241022, image:',!!imageData);
+  console.log('[Claude API] Calling with model: claude-3-5-sonnet-20241022, image:',!!base64Data);
   try{
     const controller=new AbortController();
     const timeoutId=setTimeout(()=>controller.abort(),30000);
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-3-5-sonnet-20241022',max_tokens:4096,system,messages}),signal:controller.signal});
     clearTimeout(timeoutId);
     console.log('[Claude API] Response status:',res.status);
-    if(!res.ok){const err=await res.text();console.error('[Claude API] Error:',err);showError(resultId,`API Error ${res.status}: ${err}`);return null;}
+    if(!res.ok){
+      const err=await res.text();
+      console.error('[Claude API] Error:',err);
+      // If image was rejected as "too large", retry without image
+      if(base64Data&&err.includes('too large')){
+        console.log('[Claude API] Retrying without image...');
+        showError(resultId,'Image rejected by API. Retrying with text only...');
+        const messagesNoImg=[{role:'user',content:[{type:'text',text:user}]}];
+        const res2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-3-5-sonnet-20241022',max_tokens:4096,system,messages:messagesNoImg}),signal:controller.signal});
+        if(!res2.ok){const err2=await res2.text();showError(resultId,`API Error ${res2.status}: ${err2}`);return null;}
+        const data2=await res2.json();
+        const text2=data2.content?.[0]?.text||'';
+        console.log('[Claude API] Retry response text:',text2);
+        return text2;
+      }
+      showError(resultId,`API Error ${res.status}: ${err}`);return null;
+    }
     const data=await res.json();
     const text=data.content?.[0]?.text||'';
     console.log('[Claude API] Response text:',text);
