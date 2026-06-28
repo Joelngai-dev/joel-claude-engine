@@ -155,7 +155,7 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 1500,
+        max_tokens: 2500,
         system: SYSTEM_PROMPT,
         tools,
         messages,
@@ -171,9 +171,9 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
     messages.push({ role: 'assistant', content: data.content });
 
     if (data.stop_reason === 'end_turn') {
-      // Collect ALL text blocks — web_search returns [intro, tool_use, recommendation]
-      const texts = data.content.filter(b => b.type === 'text').map(b => b.text);
-      return texts[texts.length - 1] || texts[0] || 'No recommendation returned.';
+      // Join ALL text blocks — Claude writes some sections before searching, rest after
+      const texts = data.content.filter(b => b.type === 'text').map(b => b.text.trim()).filter(Boolean);
+      return texts.join('\n\n') || 'No recommendation returned.';
     }
 
     if (data.stop_reason === 'tool_use') {
