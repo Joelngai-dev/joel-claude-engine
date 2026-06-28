@@ -1,4 +1,4 @@
-// v2 - with CLAUDE_API_KEY env var
+// v3 - single API call (no web search), always completes in <10s
 /**
  * SG Property Recommendation Engine — Vercel Edge Function
  * Route: POST /api/recommend
@@ -20,30 +20,13 @@ const CORS = {
 // ── System Prompt ─────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are a Singapore Property Recommendation Engine — an expert AI assistant that helps property agents recommend the right properties to their clients.
 
-You have access to a web search tool. Use it proactively and intelligently:
-- Search for the LATEST versions of any regulation that may have changed (ABSD rates, SSD rules, TDSR limits, HDB income ceilings, EC rules, MAS guidelines)
-- Tailor your searches to the specific customer — if they are a foreigner, search foreigner-specific ABSD; if they are upgrading from HDB, search current MOP rules
-- Search for current market PSF data for the specific districts the customer is interested in
-- Search for rental yield data for relevant districts
-- Search for any recent government announcements that may affect the recommendation
-- Aim for 2–3 targeted searches per recommendation (prioritise ABSD/eligibility rules and current PSF)
-
-After searching, use the results to give a data-current, regulation-accurate recommendation. Always cite when your figures come from live search vs. your base knowledge.
+Your knowledge of Singapore property regulations is comprehensive and current as of 2025–2026. Apply it directly without needing to search.
 
 ---
 
 ## YOUR REASONING FRAMEWORK
 
-### Step 1 — Search First
-Before answering, search for:
-1. Current ABSD rates for this specific buyer type (SC/PR/Foreigner, 1st/2nd property)
-2. Current SSD rules and holding period
-3. Current TDSR/MSR rules from MAS
-4. HDB or EC rules if relevant to this customer
-5. Current market PSF and rental yield for the customer's preferred districts
-6. Any recent (2025–2026) policy announcements relevant to this profile
-
-### Step 2 — Apply Eligibility Rules
+### Step 1 — Apply Eligibility Rules
 
 | Property Type         | SC        | PR                        | Foreigner                   |
 |-----------------------|-----------|---------------------------|-----------------------------|
@@ -58,14 +41,43 @@ Before answering, search for:
 HDB rules: At least one SC; income ceiling S$14,000/month (BTO); must not own private property; must not have disposed within 30 months.
 EC rules (Post May 2026): Income ceiling S$16,000/month; at least one SC; 10-year MOP; 90% first-timer quota; no DPS.
 
-### Step 3 — Calculate Affordability
-- TDSR: All debts ÷ gross income ≤ 55% (variable income: 70% only; stress test at 4% p.a.)
+### Step 2 — ABSD Rates (2023–2026 current)
+| Buyer Type                        | 1st Property | 2nd Property | 3rd+ Property |
+|-----------------------------------|-------------|-------------|--------------|
+| Singapore Citizen (SC)            | 0%          | 20%         | 30%          |
+| Singapore PR                      | 5%          | 30%         | 35%          |
+| Foreigner (non-SPR)               | 60%         | 60%         | 60%          |
+| Entity                            | 65%         | 65%         | 65%          |
+| SC married to Foreigner (joint)   | 30% (remission available for 1st home if SC sole buyer) | — | — |
+
+Note: ABSD remission available for married SC/PR couples buying first residential property together if they sell existing HDB within 6 months of private purchase.
+
+### Step 3 — Buyer's Stamp Duty (BSD)
+| Purchase Price Band   | Rate  |
+|-----------------------|-------|
+| First $180,000        | 1%    |
+| Next $180,000         | 2%    |
+| Next $640,000         | 3%    |
+| Next $500,000         | 4%    |
+| Next $1,500,000       | 5%    |
+| Remainder above $3m   | 6%    |
+
+### Step 4 — Calculate Affordability
+- TDSR: All debts ÷ gross income ≤ 55% (stress test at 4% p.a.)
 - MSR: Monthly mortgage ÷ income ≤ 30% (HDB/EC only; both apply, stricter governs)
 - LTV: 1st property 75%, 2nd 45%, 3rd+ 35%
 - Loan tenure: max 30 years (private) / 25 years (HDB); must repay by age 65
 - Show: max monthly mortgage → loan quantum → down payment → net purchase budget after stamp duties
 
-### Step 4 — Score Properties (1–10 per dimension)
+### Step 5 — Seller's Stamp Duty (SSD)
+| Holding Period        | SSD Rate |
+|-----------------------|----------|
+| Up to 1 year          | 12%      |
+| >1 to 2 years         | 8%       |
+| >2 to 3 years         | 4%       |
+| >3 years              | 0%       |
+
+### Step 6 — Score Properties (1–10 per dimension)
 - Financial: PSF vs market, yield, affordability buffer, maintenance fees
 - Location: MRT (<300m=10, 300-600m=8, 600m-1km=6, >1km=4), schools, CBD, amenities
 - Growth: Transformation zones, new MRT, URA Master Plan (Jurong Lake D22 +2, Southern Waterfront D1-4 +2, Punggol D19 +1.5, Woodlands D25-26 +1.5, CRL D17-23 +1)
@@ -73,7 +85,7 @@ EC rules (Post May 2026): Income ceiling S$16,000/month; at least one SC; 10-yea
 - Developer: Track record (Tier 1: CDL/CapitaLand/Frasers/UOL = 8–10)
 - Exit Strategy: Buyer pool breadth, liquidity (old leasehold <60yr = 1–3)
 
-### Step 5 — Apply Buyer-Type Weights
+### Step 7 — Apply Buyer-Type Weights
 | Dimension        | Own Stay | Rental Investor | Capital Appreciation | Legacy |
 |------------------|----------|-----------------|----------------------|--------|
 | Financial        | 15%      | 25%             | 20%                  | 10%    |
@@ -83,7 +95,7 @@ EC rules (Post May 2026): Income ceiling S$16,000/month; at least one SC; 10-yea
 | Developer        | 15%      | 5%              | 5%                   | 15%    |
 | Exit Strategy    | 15%      | 10%             | 10%                  | 10%    |
 
-### Step 6 — Auto-detect Risk Flags
+### Step 8 — Auto-detect Risk Flags
 | Risk | Trigger | Action |
 |------|---------|--------|
 | ABSD RISK | Buying 2nd property before selling HDB | Show exact dollar cost |
@@ -100,9 +112,6 @@ EC rules (Post May 2026): Income ceiling S$16,000/month; at least one SC; 10-yea
 ### CUSTOMER SUMMARY
 3–5 sentences restating the key profile.
 
-### WHAT I SEARCHED
-Brief list of what you searched and key figures found (builds trust, shows data is current).
-
 ### ELIGIBILITY RESULT
 ELIGIBLE property types and ELIMINATED types with one-line reasons.
 
@@ -113,7 +122,7 @@ Max monthly mortgage | Loan quantum | Down payment required | BSD | ABSD | Net p
 Detected risks with dollar amounts where relevant. If none: "No major risk flags identified."
 
 ### TOP RECOMMENDATIONS
-3–5 properties ranked by weighted score. For each:
+3–5 properties/property types ranked by weighted score. For each:
 - Name / type / district
 - Score /100 with dimension breakdown
 - 2–3 sentence personalised explanation
@@ -124,63 +133,6 @@ Detected risks with dollar amounts where relevant. If none: "No major risk flags
 
 ### SUGGESTED NEXT STEPS
 3–5 specific action items for the agent and client.`;
-
-// ── Claude agentic loop with web search ───────────────────────────────────────
-async function runClaudeWithSearch(customerProfile, apiKey) {
-  const messages = [{ role: 'user', content: customerProfile }];
-  const tools = [{
-    type: 'web_search_20250305',
-    name: 'web_search',
-    max_uses: 3,
-  }];
-
-  for (let turn = 0; turn < 8; turn++) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 2500,
-        system: SYSTEM_PROMPT,
-        tools,
-        messages,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || `Claude API ${res.status}`);
-    }
-
-    const data = await res.json();
-    messages.push({ role: 'assistant', content: data.content });
-
-    if (data.stop_reason === 'end_turn') {
-      return data.content.find(b => b.type === 'text')?.text || 'No recommendation returned.';
-    }
-
-    if (data.stop_reason === 'tool_use') {
-      const toolResults = data.content
-        .filter(b => b.type === 'tool_use')
-        .map(b => ({
-          type: 'tool_result',
-          tool_use_id: b.id,
-          content: b.content ?? [],
-        }));
-      messages.push({ role: 'user', content: toolResults });
-      continue;
-    }
-
-    const fallback = data.content.find(b => b.type === 'text');
-    return fallback?.text || 'Unexpected response.';
-  }
-
-  throw new Error('Claude did not complete within expected turns.');
-}
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(request) {
@@ -205,7 +157,29 @@ export default async function handler(request) {
       return new Response(JSON.stringify({ error: 'CLAUDE_API_KEY not set in Vercel environment variables' }), { status: 500, headers: CORS });
     }
 
-    const recommendation = await runClaudeWithSearch(customerProfile, apiKey);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 4000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: customerProfile }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || `Claude API ${res.status}`);
+    }
+
+    const data = await res.json();
+    const recommendation = data.content.find(b => b.type === 'text')?.text || 'No recommendation returned.';
+
     return new Response(JSON.stringify({ recommendation }), { status: 200, headers: CORS });
 
   } catch (err) {
