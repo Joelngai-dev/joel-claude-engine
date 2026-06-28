@@ -1,3 +1,4 @@
+// v2 - with CLAUDE_API_KEY env var
 /**
  * SG Property Recommendation Engine — Vercel Edge Function
  * Route: POST /api/recommend
