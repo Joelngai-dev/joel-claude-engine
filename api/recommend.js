@@ -1,4 +1,4 @@
-// v5 - re-enable web search, max_uses=1, max_tokens=1500 to stay under 25s edge limit
+// v6 - fix: grab last text block (web_search returns [intro, tool_use, recommendation])
 /**
  * SG Property Recommendation Engine — Vercel Edge Function
  * Route: POST /api/recommend
@@ -169,7 +169,9 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
     messages.push({ role: 'assistant', content: data.content });
 
     if (data.stop_reason === 'end_turn') {
-      return data.content.find(b => b.type === 'text')?.text || 'No recommendation returned.';
+      // Collect ALL text blocks — web_search returns [intro, tool_use, recommendation]
+      const texts = data.content.filter(b => b.type === 'text').map(b => b.text);
+      return texts[texts.length - 1] || texts[0] || 'No recommendation returned.';
     }
 
     if (data.stop_reason === 'tool_use') {
@@ -184,9 +186,9 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
       continue;
     }
 
-    // Fallback: return any text found
-    const fallback = data.content.find(b => b.type === 'text');
-    return fallback?.text || 'Unexpected response.';
+    // Fallback: return last text block found
+    const fallbackTexts = data.content.filter(b => b.type === 'text');
+    return fallbackTexts[fallbackTexts.length - 1]?.text || 'Unexpected response.';
   }
 
   throw new Error('Claude did not complete within expected turns.');
