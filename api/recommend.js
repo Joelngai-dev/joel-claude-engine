@@ -26,7 +26,7 @@ You have access to a web search tool. Use it proactively and intelligently:
 - Search for current market PSF data for the specific districts the customer is interested in
 - Search for rental yield data for relevant districts
 - Search for any recent government announcements that may affect the recommendation
-- Aim for 3–7 targeted searches per recommendation
+- Aim for 2–3 targeted searches per recommendation (prioritise ABSD/eligibility rules and current PSF)
 
 After searching, use the results to give a data-current, regulation-accurate recommendation. Always cite when your figures come from live search vs. your base knowledge.
 
@@ -131,10 +131,10 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
   const tools = [{
     type: 'web_search_20250305',
     name: 'web_search',
-    max_uses: 7,
+    max_uses: 3,
   }];
 
-  for (let turn = 0; turn < 15; turn++) {
+  for (let turn = 0; turn < 8; turn++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -143,8 +143,8 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
+        model: 'claude-haiku-4-5',
+        max_tokens: 2500,
         system: SYSTEM_PROMPT,
         tools,
         messages,
