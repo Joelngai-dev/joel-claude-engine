@@ -1,4 +1,4 @@
-// v3 - single API call (no web search), always completes in <10s
+// v4 - single API call, max_tokens=1500 to stay under 25s edge limit
 /**
  * SG Property Recommendation Engine — Vercel Edge Function
  * Route: POST /api/recommend
@@ -166,7 +166,7 @@ export default async function handler(request) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 4000,
+        max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: customerProfile }],
       }),
