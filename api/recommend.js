@@ -127,17 +127,18 @@ Max monthly mortgage | Loan quantum | Down payment required | BSD | ABSD | Net p
 Detected risks with dollar amounts where relevant. If none: "No major risk flags identified."
 
 ### TOP RECOMMENDATIONS
-3–5 properties/property types ranked by weighted score. For each:
+3 properties/property types ranked by weighted score. For each:
 - Name / type / district
 - Score /100 with dimension breakdown
-- 2–3 sentence personalised explanation
+- 2 sentence personalised explanation
 - One key caveat
+
+### SUGGESTED NEXT STEPS
+3 specific action items for the agent and client. Keep brief.
 
 ### COMPARISON TABLE
 | Rank | Property | District | Type | Score | Top Reason |
-
-### SUGGESTED NEXT STEPS
-3–5 specific action items for the agent and client.`;
+(3 rows only)`;
 
 // ── Claude agentic loop with 1 web search ─────────────────────────────────────
 async function runClaudeWithSearch(customerProfile, apiKey) {
