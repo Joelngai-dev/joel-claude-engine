@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SG Property Recommendation Engine</title>
+<style>
+  :root {
+    --navy: #1B3A6B;
+    --gold: #C89B2F;
+    --light: #F5F7FB;
+    --white: #FFFFFF;
+    --text: #222222;
+    --muted: #6B7280;
+    --border: #DDE3EF;
+    --green: #15803D;
+    --red: #B91C1C;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(27,58,107,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); min-height: 100vh; }
+
+  /* ── Header ── */
+  header { background: var(--navy); color: white; padding: 18px 32px; display: flex; align-items: center; gap: 16px; }
+  header .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  header .logo span { color: var(--gold); }
+  header .subtitle { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+
+  /* ── Settings bar ── */
+  .settings-bar { background: #EEF2F7; border-bottom: 1px solid var(--border); padding: 10px 32px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .settings-bar label { font-size: 12px; font-weight: 600; color: var(--navy); }
+  .settings-bar input { font-size: 12px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; width: 340px; }
+  .settings-bar .hint { font-size: 11px; color: var(--muted); }
+
+  /* ── Progress bar ── */
+  .progress-wrap { padding: 20px 32px 0; max-width: 860px; margin: 0 auto; }
+  .steps { display: flex; gap: 0; margin-bottom: 28px; }
+  .step { flex: 1; text-align: center; position: relative; }
+  .step:not(:last-child)::after { content: ''; position: absolute; top: 16px; left: 50%; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+  .step.done:not(:last-child)::after { background: var(--gold); }
+  .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--border); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; position: relative; z-index: 1; }
+  .step.active .step-num { background: var(--navy); color: white; }
+  .step.done .step-num { background: var(--gold); color: white; }
+  .step-label { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .step.active .step-label { color: var(--navy); font-weight: 600; }
+
+  /* ── Card ── */
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 32px; max-width: 860px; margin: 0 auto 28px; }
+  .card-title { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ── Form elements ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.span2 { grid-column: span 2; }
+  label { font-size: 12px; font-weight: 600; color: var(--navy); }
+  input, select, textarea {
+    padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 7px;
+    font-size: 13.5px; color: var(--text); background: #FAFBFD;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy); background: white; }
+  textarea { resize: vertical; min-height: 90px; }
+  .field-hint { font-size: 11px; color: var(--muted); }
+
+  /* ── Option cards (radio/checkbox as cards) ── */
+  .option-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .option-card input { display: none; }
+  .option-card label {
+    display: block; padding: 12px 14px; border: 2px solid var(--border);
+    border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 500;
+    text-align: center; color: var(--text); background: #FAFBFD;
+    transition: all 0.18s;
+  }
+  .option-card input:checked + label { border-color: var(--navy); background: #EEF2F7; color: var(--navy); font-weight: 700; }
+  .option-card label:hover { border-color: var(--gold); }
+
+  /* ── Navigation buttons ── */
+  .nav { display: flex; justify-content: space-between; margin-top: 28px; }
+  .btn { padding: 11px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.18s; }
+  .btn-primary { background: var(--navy); color: white; }
+  .btn-primary:hover { background: #14305A; }
+  .btn-secondary { background: transparent; color: var(--navy); border: 2px solid var(--navy); }
+  .btn-secondary:hover { background: #EEF2F7; }
+  .btn-gold { background: var(--gold); color: white; font-size: 15px; padding: 13px 36px; }
+  .btn-gold:hover { background: #A87D22; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Results ── */
+  #results { display: none; max-width: 860px; margin: 0 auto 40px; }
+  .result-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; margin-bottom: 18px; }
+  .result-card h2 { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 12px; border-bottom: 2px solid var(--gold); padding-bottom: 8px; }
+  .result-body { font-size: 13.5px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+  .result-body h3 { font-size: 14px; color: var(--navy); margin: 14px 0 6px; font-weight: 700; }
+  .result-body strong { color: var(--navy); }
+  .flag-box { background: #FFF7ED; border-left: 4px solid var(--gold); padding: 12px 16px; border-radius: 6px; font-size: 13px; margin: 8px 0; }
+  .score-badge { display: inline-block; background: var(--navy); color: white; font-weight: 700; border-radius: 20px; padding: 2px 12px; font-size: 12px; margin-left: 8px; }
+
+  /* ── Loading ── */
+  .loading { text-align: center; padding: 60px 20px; }
+  .spinner { width: 44px; height: 44px; border: 4px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 18px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: var(--muted); font-size: 14px; }
+
+  /* ── Markdown-like result rendering ── */
+  .ai-output { font-size: 13.5px; line-height: 1.8; }
+  .ai-output h3 { color: var(--navy); font-size: 14.5px; margin: 18px 0 6px; }
+  .ai-output table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px; }
+  .ai-output th { background: var(--navy); color: white; padding: 8px 10px; text-align: left; }
+  .ai-output td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  .ai-output tr:nth-child(even) td { background: #F5F7FB; }
+  .ai-output p { margin: 8px 0; }
+  .ai-output ul { padding-left: 20px; margin: 6px 0; }
+  .ai-output li { margin: 4px 0; }
+  .ai-output .section-head { background: #EEF2F7; padding: 10px 14px; border-radius: 7px; font-weight: 700; color: var(--navy); margin: 18px 0 10px; font-size: 14px; }
+
+  /* ── New analysis btn ── */
+  #new-btn { display: none; text-align: center; margin-bottom: 32px; }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    .progress-wrap, .card, #results { padding-left: 12px; padding-right: 12px; }
+    .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+    .field.span2 { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">SG Property <span>Engine</span></div>
+    <div class="subtitle">AI-Powered Property Recommendation for Singapore Agents</div>
+  </div>
+</header>
+
+<!-- Settings Bar -->
+<div class="settings-bar">
+  <label>API Endpoint:</label>
+  <input type="text" id="api-endpoint" placeholder="https://joel-claude-engine.vercel.app/api/recommend" value="https://joel-claude-engine.vercel.app/api/recommend" />
+  <span class="hint">✅ Live AI engine — powered by Vercel. No API key needed.</span>
+</div>
+
+<!-- Progress Steps -->
+<div class="progress-wrap" id="progress-wrap">
+  <div class="steps">
+    <div class="step active" id="s1"><div class="step-num">1</div><div class="step-label">Profile</div></div>
+    <div class="step" id="s2"><div class="step-num">2</div><div class="step-label">Finances</div></div>
+    <div class="step" id="s3"><div class="step-num">3</div><div class="step-label">Purpose</div></div>
+    <div class="step" id="s4"><div class="step-num">4</div><div class="step-label">Properties</div></div>
+    <div class="step" id="s5"><div class="step-num">5</div><div class="step-label">Results</div></div>
+  </div>
+</div>
+
+<!-- ══ STEP 1: CUSTOMER PROFILE ══ -->
+<div class="card" id="step1">
+  <div class="card-title">Customer Profile</div>
+  <div class="card-sub">Basic personal and eligibility information</div>
+  <div class="form-grid">
+    <div class="field">
+      <label>Customer Name (optional)</label>
+      <input type="text" id="name" placeholder="e.g. Mr Tan Wei Ming" />
+    </div>
+    <div class="field">
+      <label>Age *</label>
+      <input type="number" id="age" placeholder="e.g. 35" min="18" max="80" />
+    </div>
+    <div class="field span2">
+      <label>Citizenship *</label>
+      <div class="option-cards">
+        <div class="option-card"><input type="radio" name="citizenship" id="c1" value="Singapore Citizen"><label for="c1">🇸🇬 Singapore Citizen</label></div>
+        <div class="option-card"><input type="radio" name="citizenship" id="c2" value="Singapore PR"><label for="c2">🟢 Singapore PR</label></div>
+        <div class="option-card"><input type="radio" name="citizenship" id="c3" value="Foreigner"><label for="c3">🌏 Foreigner</label></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Marital Status *</label>
+      <select id="marital">
+        <option value="">Select...</option>
+        <option>Single</option>
+        <option>Married</option>
+        <option>Divorced</option>
+        <option>Widowed</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Number of Children</label>
+      <select id="children">
+        <option value="0">None</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3+</option>
+      </select>
+    </div>
+    <div class="field span2">
+      <label>Property Ownership Status *</label>
+      <div class="option-cards">
+        <div class="option-card"><input type="radio" name="ownership" id="o1" value="First property (no current ownership)"><label for="o1">First Property</label></div>
+        <div class="option-card"><input type="radio" name="ownership" id="o2" value="Currently owns HDB flat"><label for="o2">Owns HDB</label></div>
+        <div class="option-card"><input type="radio" name="ownership" id="o3" value="Currently owns private property"><label for="o3">Owns Private</label></div>
+        <div class="option-card"><input type="radio" name="ownership" id="o4" value="Has sold HDB within last 12 months"><label for="o4">Sold HDB Recently</label></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav"><div></div><button class="btn btn-primary" onclick="goTo(2)">Next →</button></div>
+</div>
+
+<!-- ══ STEP 2: FINANCES ══ -->
+<div class="card" id="step2" style="display:none">
+  <div class="card-title">Financial Profile</div>
+  <div class="card-sub">Used to calculate TDSR, MSR, and maximum affordable price</div>
+  <div class="form-grid">
+    <div class="field">
+      <label>Monthly Fixed Income (S$) *</label>
+      <input type="number" id="fixed-income" placeholder="e.g. 8000" />
+      <span class="field-hint">Gross, before CPF deduction</span>
+    </div>
+    <div class="field">
+      <label>Monthly Variable Income (S$)</label>
+      <input type="number" id="var-income" placeholder="e.g. 2000" />
+      <span class="field-hint">Commission, bonus — only 70% counted by banks</span>
+    </div>
+    <div class="field">
+      <label>Existing Monthly Debt Repayments (S$)</label>
+      <input type="number" id="existing-debt" placeholder="e.g. 1500" />
+      <span class="field-hint">Car loan, personal loan, credit card minimums</span>
+    </div>
+    <div class="field">
+      <label>CPF Ordinary Account Balance (S$)</label>
+      <input type="number" id="cpf" placeholder="e.g. 80000" />
+    </div>
+    <div class="field">
+      <label>Cash Savings Available (S$) *</label>
+      <input type="number" id="cash" placeholder="e.g. 150000" />
+      <span class="field-hint">For down payment and stamp duties</span>
+    </div>
+    <div class="field">
+      <label>Maximum Budget in Mind (S$)</label>
+      <input type="number" id="budget" placeholder="e.g. 1500000" />
+      <span class="field-hint">Optional — engine will calculate from financials</span>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="btn btn-secondary" onclick="goTo(1)">← Back</button>
+    <button class="btn btn-primary" onclick="goTo(3)">Next →</button>
+  </div>
+</div>
+
+<!-- ══ STEP 3: PURPOSE & PREFERENCES ══ -->
+<div class="card" id="step3" style="display:none">
+  <div class="card-title">Purpose & Preferences</div>
+  <div class="card-sub">This shapes the scoring weights and recommendation logic</div>
+  <div class="form-grid full">
+    <div class="field">
+      <label>Primary Purchase Purpose *</label>
+      <div class="option-cards">
+        <div class="option-card"><input type="radio" name="purpose" id="p1" value="Own Stay"><label for="p1">🏠 Own Stay</label></div>
+        <div class="option-card"><input type="radio" name="purpose" id="p2" value="Rental Investment"><label for="p2">💰 Rental Income</label></div>
+        <div class="option-card"><input type="radio" name="purpose" id="p3" value="Capital Appreciation"><label for="p3">📈 Capital Growth</label></div>
+        <div class="option-card"><input type="radio" name="purpose" id="p4" value="Legacy / Generational"><label for="p4">🏛 Legacy</label></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Investment Time Horizon *</label>
+      <div class="option-cards">
+        <div class="option-card"><input type="radio" name="horizon" id="h1" value="Short (3-5 years)"><label for="h1">3–5 Years</label></div>
+        <div class="option-card"><input type="radio" name="horizon" id="h2" value="Medium (7-10 years)"><label for="h2">7–10 Years</label></div>
+        <div class="option-card"><input type="radio" name="horizon" id="h3" value="Long (15-20 years)"><label for="h3">15–20 Years</label></div>
+        <div class="option-card"><input type="radio" name="horizon" id="h4" value="Very Long (20+ years)"><label for="h4">20+ Years</label></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-grid" style="margin-top:18px">
+    <div class="field">
+      <label>Preferred Region</label>
+      <select id="region">
+        <option value="No preference">No preference</option>
+        <option>CCR (Core Central — Districts 1-4, 9-11)</option>
+        <option>RCR (City Fringe — Districts 3-5, 7-8, 12-15, 20)</option>
+        <option>OCR (Suburbs — Districts 16-19, 21-28)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>MRT Proximity Priority</label>
+      <select id="mrt">
+        <option value="Within 300m walk">Within 300m (integrated/adjacent)</option>
+        <option value="Within 500m walk">Within 500m walk</option>
+        <option value="Within 10-minute walk">Within 10-minute walk</option>
+        <option value="No strong MRT preference">No strong preference</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>School Proximity Needed?</label>
+      <select id="school">
+        <option value="No school requirement">No requirement</option>
+        <option value="Primary school within 1km">Primary school within 1km</option>
+        <option value="Primary school within 2km">Primary school within 2km</option>
+        <option value="Secondary school within 2km">Secondary school within 2km</option>
+        <option value="International school nearby">International school nearby</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>New Launch or Resale?</label>
+      <select id="launch">
+        <option value="No preference">No preference</option>
+        <option value="New launch preferred">New launch preferred</option>
+        <option value="Resale preferred">Resale preferred</option>
+        <option value="New launch only">New launch only</option>
+        <option value="Resale only">Resale only</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Freehold or Leasehold?</label>
+      <select id="tenure">
+        <option value="No preference">No preference</option>
+        <option value="Freehold strongly preferred">Freehold strongly preferred</option>
+        <option value="Freehold preferred but flexible">Freehold preferred but flexible</option>
+        <option value="99-year leasehold is fine">99-year leasehold is fine</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>When does the buyer need to move in?</label>
+      <select id="movein">
+        <option value="Immediate (within 6 months)">Immediate (within 6 months)</option>
+        <option value="Within 1 year">Within 1 year</option>
+        <option value="1-3 years">1–3 years</option>
+        <option value="Flexible (3+ years)">Flexible (3+ years)</option>
+      </select>
+    </div>
+  </div>
+  <div class="field" style="margin-top:18px">
+    <label>Additional Notes / Special Requirements</label>
+    <textarea id="notes" placeholder="e.g. Wife is a PR, couple has a 6-year-old child, parents live in Tampines so prefer East side, currently renting in Katong..."></textarea>
+  </div>
+  <div class="nav">
+    <button class="btn btn-secondary" onclick="goTo(2)">← Back</button>
+    <button class="btn btn-primary" onclick="goTo(4)">Next →</button>
+  </div>
+</div>
+
+<!-- ══ STEP 4: PROPERTIES TO EVALUATE ══ -->
+<div class="card" id="step4" style="display:none">
+  <div class="card-title">Properties to Evaluate</div>
+  <div class="card-sub">List the properties you want the engine to score and rank. Include as much detail as you have.</div>
+
+  <div id="properties-list"></div>
+
+  <button class="btn btn-secondary" onclick="addProperty()" style="margin-bottom:18px">+ Add Property</button>
+
+  <div class="field">
+    <label>Or describe the search in general terms (if no specific properties yet)</label>
+    <textarea id="general-search" placeholder="e.g. Looking for a 3-bedroom resale condo in Districts 15 or 19, budget around S$1.8m, close to MRT. Open to freehold or leasehold." style="min-height:70px"></textarea>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-secondary" onclick="goTo(3)">← Back</button>
+    <button class="btn btn-gold" onclick="runAnalysis()">🔍 Get AI Recommendation</button>
+  </div>
+</div>
+
+<!-- ══ STEP 5: RESULTS ══ -->
+<div id="results">
+  <div class="result-card" id="loading-card" style="display:none">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Analysing customer profile and scoring properties...</p>
+      <p style="margin-top:6px;font-size:12px">Applying Singapore property regulations and playbook framework</p>
+    </div>
+  </div>
+  <div class="result-card" id="output-card" style="display:none">
+    <h2>AI Recommendation Report</h2>
+    <div class="ai-output" id="ai-output"></div>
+  </div>
+</div>
+
+<div id="new-btn">
+  <button class="btn btn-secondary" onclick="startOver()">← Start New Analysis</button>
+</div>
+
+<script>
+// ── Property entry management ──────────────────────────────────────────────
+let propCount = 0;
+
+function addProperty() {
+  propCount++;
+  const id = propCount;
+  const div = document.createElement('div');
+  div.id = 'prop-' + id;
+  div.style.cssText = 'background:#F5F7FB;border:1.5px solid #DDE3EF;border-radius:9px;padding:16px;margin-bottom:14px;';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong style="color:#1B3A6B;font-size:13px">Property ${id}</strong>
+      <button onclick="document.getElementById('prop-${id}').remove()" style="background:none;border:none;cursor:pointer;color:#B91C1C;font-size:13px">✕ Remove</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Property Name / Development</label><input type="text" id="pname-${id}" placeholder="e.g. The Continuum"/></div>
+      <div class="field"><label>District</label><input type="text" id="pdistrict-${id}" placeholder="e.g. D15"/></div>
+      <div class="field"><label>Property Type</label>
+        <select id="ptype-${id}">
+          <option>HDB Resale</option><option>EC (New Launch)</option><option>EC (Resale)</option>
+          <option>Private Condo (New Launch)</option><option>Private Condo (Resale)</option>
+          <option>Landed</option>
+        </select>
+      </div>
+      <div class="field"><label>Tenure</label>
+        <select id="ptenure-${id}"><option>99-year Leasehold</option><option>Freehold</option><option>999-year Leasehold</option></select>
+      </div>
+      <div class="field"><label>Asking Price (S$)</label><input type="number" id="pprice-${id}" placeholder="e.g. 1800000"/></div>
+      <div class="field"><label>Floor Area (sqft)</label><input type="number" id="parea-${id}" placeholder="e.g. 1200"/></div>
+      <div class="field"><label>MRT Distance</label>
+        <select id="pmrt-${id}">
+          <option>Within 300m</option><option>300–600m</option><option>600m–1km</option><option>Over 1km</option>
+        </select>
+      </div>
+      <div class="field"><label>Completion Year (if new launch)</label><input type="text" id="ptop-${id}" placeholder="e.g. 2028 or 'Completed'"/></div>
+      <div class="field" style="grid-column:span 2"><label>Additional Notes (facing, level, nearby schools, developer, etc.)</label>
+        <textarea id="pnotes-${id}" style="min-height:55px" placeholder="e.g. High floor, unobstructed view, 500m from Paya Lebar MRT, near Tao Nan School, developed by CDL"></textarea>
+      </div>
+    </div>`;
+  document.getElementById('properties-list').appendChild(div);
+}
+
+// ── Step navigation ──────────────────────────────────────────────────────────
+function goTo(step) {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('step' + i).style.display = i === step ? 'block' : 'none';
+    const el = document.getElementById('s' + i);
+    el.classList.remove('active','done');
+    if (i < step) el.classList.add('done');
+    if (i === step) el.classList.add('active');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Build the prompt from form data ─────────────────────────────────────────
+function buildPrompt() {
+  const get = id => (document.getElementById(id) || {}).value || '';
+  const radio = name => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : 'Not specified'; };
+
+  const fixedIncome = parseFloat(get('fixed-income')) || 0;
+  const varIncome   = parseFloat(get('var-income'))   || 0;
+  const effectiveIncome = fixedIncome + (varIncome * 0.7);
+  const existingDebt = parseFloat(get('existing-debt')) || 0;
+  const cpf  = parseFloat(get('cpf'))  || 0;
+  const cash = parseFloat(get('cash')) || 0;
+  const budget = parseFloat(get('budget')) || 0;
+
+  let profile = `CUSTOMER PROFILE
+================
+Name: ${get('name') || 'Not provided'}
+Age: ${get('age')}
+Citizenship: ${radio('citizenship')}
+Marital Status: ${get('marital')}
+Children: ${get('children')}
+Property Ownership: ${radio('ownership')}
+
+FINANCIAL DETAILS
+=================
+Monthly Fixed Income: S$${fixedIncome.toLocaleString()}
+Monthly Variable Income: S$${varIncome.toLocaleString()} (effective 70% = S$${(varIncome*0.7).toLocaleString()})
+Total Effective Monthly Income: S$${effectiveIncome.toLocaleString()}
+Existing Monthly Debt Repayments: S$${existingDebt.toLocaleString()}
+CPF Ordinary Account Balance: S$${cpf.toLocaleString()}
+Cash Savings Available: S$${cash.toLocaleString()}
+${budget > 0 ? `Budget in Mind: S$${budget.toLocaleString()}` : 'No specific budget stated — please calculate from financials.'}
+
+PURCHASE PURPOSE & PREFERENCES
+================================
+Primary Purpose: ${radio('purpose')}
+Time Horizon: ${radio('horizon')}
+Preferred Region: ${get('region')}
+MRT Proximity Priority: ${get('mrt')}
+School Proximity: ${get('school')}
+New Launch vs Resale: ${get('launch')}
+Tenure Preference: ${get('tenure')}
+Move-in Timeline: ${get('movein')}
+Additional Notes: ${get('notes') || 'None'}
+
+`;
+
+  // Collect properties
+  const props = [];
+  for (let i = 1; i <= propCount; i++) {
+    const el = document.getElementById('prop-' + i);
+    if (!el) continue;
+    const pname = document.getElementById('pname-'+i)?.value;
+    if (!pname) continue;
+    props.push(`Property ${props.length+1}: ${pname}
+  - District: ${document.getElementById('pdistrict-'+i)?.value || 'Not stated'}
+  - Type: ${document.getElementById('ptype-'+i)?.value}
+  - Tenure: ${document.getElementById('ptenure-'+i)?.value}
+  - Asking Price: S$${parseFloat(document.getElementById('pprice-'+i)?.value||0).toLocaleString()}
+  - Floor Area: ${document.getElementById('parea-'+i)?.value || 'Not stated'} sqft
+  - MRT Distance: ${document.getElementById('pmrt-'+i)?.value}
+  - TOP/Completion: ${document.getElementById('ptop-'+i)?.value || 'Not stated'}
+  - Notes: ${document.getElementById('pnotes-'+i)?.value || 'None'}`);
+  }
+
+  const generalSearch = get('general-search');
+
+  if (props.length > 0) {
+    profile += `PROPERTIES TO EVALUATE
+=======================
+${props.join('\n\n')}
+`;
+  } else if (generalSearch) {
+    profile += `PROPERTY SEARCH BRIEF
+======================
+${generalSearch}
+`;
+  } else {
+    profile += `PROPERTY SEARCH BRIEF
+======================
+No specific properties provided. Please provide general recommendations based on the customer profile, affordability calculation, and suitable property types/districts.
+`;
+  }
+
+  profile += `\nPlease apply the full playbook framework: eligibility check, affordability calculation, stamp duty calculation, risk flags, then score and rank the properties (or recommend property types/districts if no specific properties given). Output the full structured recommendation report.`;
+
+  return profile;
+}
+
+// ── Run the AI analysis ─────────────────────────────────────────────────────
+async function runAnalysis() {
+  const endpoint = document.getElementById('api-endpoint').value.trim();
+  const apiKey   = '';
+
+  if (!endpoint) {
+    alert('Please enter an API endpoint in the settings bar at the top.');
+    return;
+  }
+
+  // Show results area
+  for (let i = 1; i <= 4; i++) document.getElementById('step'+i).style.display = 'none';
+  document.getElementById('s5').classList.add('active');
+  document.getElementById('s4').classList.add('done');
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('loading-card').style.display = 'block';
+  document.getElementById('output-card').style.display = 'none';
+  document.getElementById('new-btn').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const customerPrompt = buildPrompt();
+
+  try {
+    let responseText = '';
+
+    if (endpoint) {
+      // ── Cloudflare Worker path ──
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_profile: customerPrompt })
+      });
+      if (!res.ok) throw new Error(`Worker responded with ${res.status}`);
+      const data = await res.json();
+      responseText = data.recommendation || data.result || data.content || JSON.stringify(data);
+
+    } else if (apiKey.startsWith('sk-ant-')) {
+      // ── Claude direct path ──
+      const systemPrompt = await getSystemPrompt();
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: customerPrompt }]
+        })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.status); }
+      const data = await res.json();
+      responseText = data.content?.[0]?.text || 'No response received.';
+
+    } else if (apiKey.startsWith('sk-')) {
+      // ── OpenAI direct path ──
+      const systemPrompt = await getSystemPrompt();
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 4096,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: customerPrompt }
+          ]
+        })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.status); }
+      const data = await res.json();
+      responseText = data.choices?.[0]?.message?.content || 'No response received.';
+    }
+
+    renderResult(responseText);
+
+  } catch (err) {
+    document.getElementById('loading-card').style.display = 'none';
+    document.getElementById('output-card').style.display = 'block';
+    document.getElementById('output-card').querySelector('h2').textContent = 'Error';
+    document.getElementById('ai-output').innerHTML = `<div class="flag-box" style="border-color:#B91C1C;background:#FEF2F2">
+      <strong>Failed to get recommendation:</strong><br>${err.message}<br><br>
+      <small>Check that the API endpoint is correct and reachable. If the issue persists, contact your system admin.</small>
+    </div>`;
+    document.getElementById('new-btn').style.display = 'block';
+  }
+}
+
+// ── Fetch system prompt (embedded fallback) ──────────────────────────────────
+async function getSystemPrompt() {
+  // Embedded system prompt — the playbook rules
+  return `You are a Singapore Property Recommendation Engine — an expert AI assistant that helps property agents recommend the right properties to their clients.
+
+You have deep knowledge of Singapore's property market, regulations, stamp duties, loan frameworks, and investment fundamentals. You reason like a senior property consultant with 20+ years of Singapore experience.
+
+Your job is to:
+1. Analyse the customer profile provided
+2. Apply eligibility and affordability rules to eliminate unsuitable property types
+3. Score suitable properties against a structured framework
+4. Return a ranked recommendation with clear, personalised explanations
+
+ELIGIBILITY RULES:
+- Singapore Citizens: Can buy HDB, EC, private condo, landed
+- Singapore PR: Can buy HDB resale (after 3yr PR), EC after privatisation, private condo; NOT new HDB BTO, NOT new EC launch
+- Foreigner: Can buy private condo only (NOT HDB, NOT EC new launch, NOT landed without LDAU approval)
+- HDB income ceiling: S$14,000/month (BTO)
+- EC income ceiling: S$16,000/month; EC MOP is 10 years (from May 2026)
+
+ABSD RATES (2026):
+- SC 1st property: 0% | 2nd: 20% | 3rd+: 30%
+- PR 1st property: 5% | 2nd: 25% | 3rd+: 30%
+- Foreigner: 60% flat
+
+SSD (from 4 Jul 2025): Year 1: 16%, Year 2: 12%, Year 3: 8%, Year 4: 4%, Year 5+: 0%
+
+AFFORDABILITY:
+- TDSR: All debts ≤ 55% of gross income; variable income count 70% only; stress test at 4% p.a.
+- MSR: Mortgage ≤ 30% of gross income (HDB/EC only)
+- LTV: 1st property 75%, 2nd property 45%, 3rd+ 35%
+
+SCORING DIMENSIONS (1-10 each):
+- Financial Score: PSF vs market, affordability buffer, yield
+- Location Score: MRT (<300m=10, 300-600m=8, >1km=5), schools, CBD access
+- Growth Score: Transformation zones, new MRT, URA Master Plan
+- Supply & Demand: Pipeline, vacancy, rental demand
+- Developer Score: Track record and quality
+- Exit Strategy: Buyer pool breadth, liquidity, historical trend
+
+WEIGHTS BY BUYER TYPE:
+Own Stay: Location 35%, Financial 15%, Developer 15%, Exit 15%, Growth 10%, S&D 10%
+Rental Investor: S&D 25%, Financial 25%, Location 20%, Growth 15%, Exit 10%, Developer 5%
+Capital Appreciation: Growth 30%, Financial 20%, Location 20%, S&D 15%, Exit 10%, Developer 5%
+Legacy: Location 25%, Growth 25%, S&D 15%, Financial 10%, Developer 15%, Exit 10%
+
+TRANSFORMATION AREAS (score boost on Growth):
+Jurong Lake District (D22) +2, Greater Southern Waterfront (D1-4) +2, Punggol Digital District (D19) +1.5, Woodlands (D25-26) +1.5, Paya Lebar Airbase (D19) +1.5, CRL corridor (D17-23) +1
+
+OUTPUT FORMAT — always use these sections:
+### CUSTOMER SUMMARY
+### ELIGIBILITY RESULT
+### AFFORDABILITY CALCULATION
+### RISK FLAGS
+### TOP RECOMMENDATIONS (ranked, scored, with reasoning)
+### COMPARISON TABLE
+### SUGGESTED NEXT STEPS
+
+Be specific, use S$ figures, reference actual regulations. Flag risks proactively.`;
+}
+
+// ── Markdown → HTML (self-contained, no CDN needed) ──────────────────────────
+function mdToHtml(text) {
+  // 1. Escape HTML entities first
+  let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // 2. Tables — must run BEFORE newline conversion
+  s = s.replace(/^(\|.+\|\r?\n)((?:\|[-:| ]+\|\r?\n))(\|.*\|\r?\n?)+/gm, tableMatch => {
+    const rows = tableMatch.trim().split('\n').filter(r => r.trim());
+    let html = '<table>';
+    rows.forEach((row, i) => {
+      if (/^\|[\s\-:|]+\|$/.test(row.trim())) return; // skip separator row
+      const cells = row.split('|').slice(1, -1); // remove leading/trailing empty
+      const tag = i === 0 ? 'th' : 'td';
+      html += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+    });
+    return html + '</table>';
+  });
+
+  // 3. Headings
+  s = s.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  s = s.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  s = s.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+  // 4. Horizontal rules
+  s = s.replace(/^---+$/gm, '<hr>');
+
+  // 5. Bold & italic
+  s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // 6. Inline code
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 7. Bullet lists — collect consecutive list lines
+  s = s.replace(/(^[ \t]*[-*] .+$\n?)+/gm, match => {
+    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*] /, '')}</li>`).join('');
+    return '<ul>' + items + '</ul>';
+  });
+
+  // 8. Checkboxes ✅ ❌ — leave as-is (already emoji in the API output)
+
+  // 9. Paragraphs — blank lines become paragraph breaks
+  s = s.replace(/\n{2,}/g, '</p><p>');
+  s = s.replace(/\n/g, '<br>');
+
+  return '<p>' + s + '</p>';
+}
+
+function renderResult(text) {
+  document.getElementById('loading-card').style.display = 'none';
+  document.getElementById('output-card').style.display = 'block';
+  document.getElementById('new-btn').style.display = 'block';
+
+  document.getElementById('ai-output').innerHTML = mdToHtml(text);
+  window.scrollTo({ top: document.getElementById('results').offsetTop - 20, behavior: 'smooth' });
+}
+
+function startOver() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('new-btn').style.display = 'none';
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('s'+i);
+    el.classList.remove('active','done');
+  }
+  goTo(1);
+}
+
+// Init — add first property slot on load
+window.onload = () => { addProperty(); };
+</script>
+</body>
+</html>
