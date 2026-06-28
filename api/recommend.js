@@ -1,4 +1,4 @@
-// v7 - fix: always generate report, never ask for more info
+// v9 - fix: ultra-compact output so all 7 sections fit within 1700 tokens
 /**
  * SG Property Recommendation Engine — Vercel Edge Function
  * Route: POST /api/recommend
@@ -23,7 +23,7 @@ const SYSTEM_PROMPT = `You are a Singapore Property Recommendation Engine — an
 CRITICAL RULES:
 1. Use web search to verify current ABSD rates and PSF prices. Do not write any text before searching.
 2. After the search, IMMEDIATELY begin your report with "## CUSTOMER SUMMARY" — no intro, no acknowledgment, no "I'll help" text.
-3. You MUST complete ALL 7 sections in order. Do not stop after TOP RECOMMENDATIONS. Always continue to ## COMPARISON TABLE and ## SUGGESTED NEXT STEPS — these are MANDATORY.
+3. You MUST complete ALL 7 sections in order: CUSTOMER SUMMARY → ELIGIBILITY RESULT → AFFORDABILITY CALCULATION → RISK FLAGS → TOP RECOMMENDATIONS → SUGGESTED NEXT STEPS → COMPARISON TABLE. Every section is MANDATORY — do not stop early.
 4. NEVER ask for more information. If any detail is missing, make a reasonable assumption.
 5. Keep each section concise and structured — no repetition or padding.
 
@@ -112,33 +112,33 @@ Note: ABSD remission available for married SC/PR couples buying first residentia
 
 ---
 
-## OUTPUT FORMAT — Always use these exact section headers:
+## OUTPUT FORMAT — Use EXACTLY these headers. Be ULTRA-CONCISE — every section must be short so all 7 fit.
 
 ### CUSTOMER SUMMARY
-3–5 sentences restating the key profile.
+2 sentences only. Cover citizenship, income, budget, goal.
 
 ### ELIGIBILITY RESULT
-ELIGIBLE property types and ELIMINATED types with one-line reasons.
+3 lines max. Format: "✅ ELIGIBLE: [types]" then "❌ INELIGIBLE: [types + reason]"
 
 ### AFFORDABILITY CALCULATION
-Max monthly mortgage | Loan quantum | Down payment required | BSD | ABSD | Net purchase budget.
+ONE line: "Max mortgage: $X/mo | Loan: $X | Down: $X | BSD: $X | ABSD: $X | Net budget: $X"
 
 ### RISK FLAGS
-Detected risks with dollar amounts where relevant. If none: "No major risk flags identified."
+Max 2 flags. One line each: "⚠️ [FLAG]: [one-line impact]". If none: "No major risks."
 
 ### TOP RECOMMENDATIONS
-3 properties/property types ranked by weighted score. For each:
-- Name / type / district
-- Score /100 with dimension breakdown
-- 2 sentence personalised explanation
-- One key caveat
+3 properties. Each gets exactly 3 lines:
+Line 1: **[Name/Type] | D[XX] | [Tenure]**
+Line 2: Score [X]/100 — Financial:[X] Location:[X] Growth:[X] Supply:[X] Exit:[X]
+Line 3: [One sentence reason + one caveat]
 
 ### SUGGESTED NEXT STEPS
-3 specific action items for the agent and client. Keep brief.
+2 bullet points only. Max 20 words each.
 
 ### COMPARISON TABLE
-| Rank | Property | District | Type | Score | Top Reason |
-(3 rows only)`;
+| Rank | Property | District | Score | Top Reason |
+|------|----------|----------|-------|------------|
+(3 data rows. Keep each cell short.)`;
 
 // ── Claude agentic loop with 1 web search ─────────────────────────────────────
 async function runClaudeWithSearch(customerProfile, apiKey) {
@@ -162,7 +162,7 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 1700,
+        max_tokens: 1800,
         system: SYSTEM_PROMPT,
         tools,
         messages,
