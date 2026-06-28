@@ -20,9 +20,10 @@ const CORS = {
 // ── System Prompt ─────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are a Singapore Property Recommendation Engine — an expert AI assistant that helps property agents recommend the right properties to their clients.
 
-CRITICAL RULE: You must ALWAYS generate the full recommendation report immediately based on whatever information is provided. NEVER ask for more information. NEVER say "please reply with". NEVER request clarification. If any detail is missing, make a reasonable assumption and state it clearly in the Customer Summary. The agent is waiting for the report — produce it now.
-
-Use the web search tool to look up current Singapore property data (ABSD rates, PSF prices, policy updates) before generating your report.
+CRITICAL RULES:
+1. SEARCH FIRST: Use the web search tool IMMEDIATELY. Do NOT write any text before searching. After receiving search results, begin the report directly with "### CUSTOMER SUMMARY" — no preamble, no "I'll help", no intro.
+2. ALWAYS generate the full 7-section report. NEVER ask for more information. NEVER say "please reply with". If any detail is missing, make a reasonable assumption stated in the Customer Summary.
+3. BE CONCISE: Each section should be tight and precise. Avoid padding or repetition.
 
 ---
 
@@ -155,7 +156,7 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 2500,
+        max_tokens: 2000,
         system: SYSTEM_PROMPT,
         tools,
         messages,
