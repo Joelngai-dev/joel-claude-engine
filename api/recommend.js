@@ -1,4 +1,4 @@
-// v4 - single API call, max_tokens=1500 to stay under 25s edge limit
+// v5 - re-enable web search, max_uses=1, max_tokens=1500 to stay under 25s edge limit
 /**
  * SG Property Recommendation Engine — Vercel Edge Function
  * Route: POST /api/recommend
@@ -134,6 +134,64 @@ Detected risks with dollar amounts where relevant. If none: "No major risk flags
 ### SUGGESTED NEXT STEPS
 3–5 specific action items for the agent and client.`;
 
+// ── Claude agentic loop with 1 web search ─────────────────────────────────────
+async function runClaudeWithSearch(customerProfile, apiKey) {
+  const messages = [{ role: 'user', content: customerProfile }];
+  const tools = [{
+    type: 'web_search_20250305',
+    name: 'web_search',
+    max_uses: 1,
+  }];
+
+  for (let turn = 0; turn < 5; turn++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        tools,
+        messages,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || `Claude API ${res.status}`);
+    }
+
+    const data = await res.json();
+    messages.push({ role: 'assistant', content: data.content });
+
+    if (data.stop_reason === 'end_turn') {
+      return data.content.find(b => b.type === 'text')?.text || 'No recommendation returned.';
+    }
+
+    if (data.stop_reason === 'tool_use') {
+      const toolResults = data.content
+        .filter(b => b.type === 'tool_use')
+        .map(b => ({
+          type: 'tool_result',
+          tool_use_id: b.id,
+          content: b.content ?? [],
+        }));
+      messages.push({ role: 'user', content: toolResults });
+      continue;
+    }
+
+    // Fallback: return any text found
+    const fallback = data.content.find(b => b.type === 'text');
+    return fallback?.text || 'Unexpected response.';
+  }
+
+  throw new Error('Claude did not complete within expected turns.');
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(request) {
   if (request.method === 'OPTIONS') {
@@ -157,29 +215,7 @@ export default async function handler(request) {
       return new Response(JSON.stringify({ error: 'CLAUDE_API_KEY not set in Vercel environment variables' }), { status: 500, headers: CORS });
     }
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: customerProfile }],
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || `Claude API ${res.status}`);
-    }
-
-    const data = await res.json();
-    const recommendation = data.content.find(b => b.type === 'text')?.text || 'No recommendation returned.';
-
+    const recommendation = await runClaudeWithSearch(customerProfile, apiKey);
     return new Response(JSON.stringify({ recommendation }), { status: 200, headers: CORS });
 
   } catch (err) {
