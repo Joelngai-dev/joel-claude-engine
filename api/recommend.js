@@ -21,9 +21,9 @@ const CORS = {
 const SYSTEM_PROMPT = `You are a Singapore Property Recommendation Engine — an expert AI assistant that helps property agents recommend the right properties to their clients.
 
 CRITICAL RULES:
-1. SEARCH FIRST: Use the web search tool IMMEDIATELY. Do NOT write any text before searching. After receiving search results, begin the report directly with "### CUSTOMER SUMMARY" — no preamble, no "I'll help", no intro.
-2. ALWAYS generate the full 7-section report. NEVER ask for more information. NEVER say "please reply with". If any detail is missing, make a reasonable assumption stated in the Customer Summary.
-3. BE CONCISE: Each section should be tight and precise. Avoid padding or repetition.
+1. ALWAYS generate the full 7-section report. NEVER ask for more information. NEVER say "please reply with". If any detail is missing, make a reasonable assumption stated in the Customer Summary.
+2. BE CONCISE: Each section should be tight and precise. Avoid padding or repetition.
+3. Use web search to verify current ABSD rates and property prices before generating the report.
 
 ---
 
@@ -146,6 +146,9 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
     max_uses: 1,
   }];
 
+  // Collect text from EVERY turn — Claude may write sections before AND after searching
+  const allTextParts = [];
+
   for (let turn = 0; turn < 5; turn++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -156,7 +159,7 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 2000,
+        max_tokens: 1500,
         system: SYSTEM_PROMPT,
         tools,
         messages,
@@ -171,10 +174,15 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
     const data = await res.json();
     messages.push({ role: 'assistant', content: data.content });
 
+    // Capture text from this turn regardless of stop_reason
+    const turnTexts = data.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text.trim())
+      .filter(Boolean);
+    allTextParts.push(...turnTexts);
+
     if (data.stop_reason === 'end_turn') {
-      // Join ALL text blocks — Claude writes some sections before searching, rest after
-      const texts = data.content.filter(b => b.type === 'text').map(b => b.text.trim()).filter(Boolean);
-      return texts.join('\n\n') || 'No recommendation returned.';
+      return allTextParts.join('\n\n') || 'No recommendation returned.';
     }
 
     if (data.stop_reason === 'tool_use') {
@@ -189,9 +197,8 @@ async function runClaudeWithSearch(customerProfile, apiKey) {
       continue;
     }
 
-    // Fallback: return last text block found
-    const fallbackTexts = data.content.filter(b => b.type === 'text');
-    return fallbackTexts[fallbackTexts.length - 1]?.text || 'Unexpected response.';
+    // Fallback
+    return allTextParts.join('\n\n') || 'Unexpected response.';
   }
 
   throw new Error('Claude did not complete within expected turns.');
